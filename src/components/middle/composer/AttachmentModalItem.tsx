@@ -26,6 +26,7 @@ type OwnProps = {
   index: number;
   onDelete?: (index: number) => void;
   onToggleSpoiler?: (index: number) => void;
+  onEdit?: (index: number) => void;
 };
 
 const BLUR_CANVAS_SIZE = 15 * REM;
@@ -39,11 +40,16 @@ const AttachmentModalItem: FC<OwnProps> = ({
   index,
   onDelete,
   onToggleSpoiler,
+  onEdit,
 }) => {
   const displayType = getDisplayType(attachment, shouldDisplayCompressed);
 
   const handleSpoilerClick = useLastCallback(() => {
     onToggleSpoiler?.(index);
+  });
+
+  const handleEditClick = useLastCallback(() => {
+    onEdit?.(index);
   });
 
   const content = useMemo(() => {
@@ -116,13 +122,19 @@ const AttachmentModalItem: FC<OwnProps> = ({
       />
       {shouldRenderOverlay && (
         <div className={styles.overlay}>
+          {displayType === 'photo' && onEdit && (
+            <Icon
+              name="edit"
+              className={styles.actionItem}
+              onClick={handleEditClick}
+            />
+          )}
           <Icon
             name={attachment.shouldSendAsSpoiler ? 'spoiler-disable' : 'spoiler'}
             className={styles.actionItem}
             onClick={handleSpoilerClick}
           />
           {onDelete && (
-
             <Icon name="delete" className={styles.actionItem} onClick={() => onDelete(index)} />
           )}
         </div>

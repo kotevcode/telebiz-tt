@@ -1,0 +1,166 @@
+.root {
+  :global(.modal-dialog) {
+    max-width: 32rem;
+    max-height: 90vh;
+  }
+}
+
+.canvasWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  padding: 1rem;
+
+  background-color: var(--color-background-secondary);
+}
+
+.canvasContainer {
+  position: relative;
+
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  max-width: 100%;
+  max-height: 24rem;
+  border-radius: var(--border-radius-default);
+
+  background-color: var(--color-background);
+
+  &.cropMode {
+    overflow: hidden;
+
+    .canvas {
+      cursor: grab;
+      transform-origin: center;
+
+      &:active {
+        cursor: grabbing;
+      }
+    }
+  }
+}
+
+.canvas {
+  display: block;
+
+  max-width: 100%;
+  max-height: 24rem;
+
+  object-fit: contain;
+}
+
+.cropOverlay {
+  pointer-events: none;
+
+  position: absolute;
+  inset: 0;
+
+  border: 0.25rem solid var(--color-primary);
+  border-radius: var(--border-radius-default);
+
+  box-shadow: inset 0 0 0 999rem rgba(0, 0, 0, 0.5);
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  padding: 1rem;
+
+  background-color: var(--color-background);
+}
+
+.modeSelector {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.modeButton {
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+
+  &.active {
+    background-color: var(--color-primary) !important;
+    color: white !important;
+  }
+}
+
+.colorPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.colorSwatch {
+  cursor: var(--custom-cursor, pointer);
+
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0.125rem solid transparent;
+  border-radius: 50%;
+
+  transition: transform 0.15s ease-in-out, border-color 0.15s ease-in-out;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &.selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.125rem var(--color-background),
+      0 0 0 0.25rem var(--color-primary);
+  }
+
+  &:first-child {
+    border-color: var(--color-borders);
+
+    &.selected {
+      border-color: var(--color-primary);
+    }
+  }
+}
+
+.brushSizeWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 1rem;
+}
+
+.brushSlider {
+  flex: 1;
+  max-width: 16rem;
+}
+
+.drawActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.zoomWrapper {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 1rem;
+}
+
+.zoomSlider {
+  flex: 1;
+  max-width: 16rem;
+}
+
+.zoomIcon {
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+}

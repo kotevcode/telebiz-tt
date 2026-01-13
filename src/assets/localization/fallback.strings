@@ -2281,3 +2281,8 @@
 "GiftValueForSaleOnFragment" = "for sale on Fragment";
 "GiftValueForSaleOnTelegram" = "for sale on Telegram";
 "EmbeddedMessageNoCaption" = "Caption removed";
+"EditMedia" = "Edit Media";
+"Draw" = "Draw";
+"Crop" = "Crop";
+"Clear" = "Clear";
+"Undo" = "Undo";

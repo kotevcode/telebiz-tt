@@ -30,6 +30,7 @@ import { validateFiles } from '../../../util/files';
 import { formatStarsAsIcon } from '../../../util/localization/format';
 import { removeAllSelections } from '../../../util/selection';
 import { openSystemFilesDialog } from '../../../util/systemFilesDialog';
+import buildAttachment from './helpers/buildAttachment';
 import getFilesFromDataTransferItems from './helpers/getFilesFromDataTransferItems';
 import { getHtmlTextLength } from './helpers/getHtmlTextLength';
 
@@ -52,6 +53,7 @@ import useMentionTooltip from './hooks/useMentionTooltip';
 import Icon from '../../common/icons/Icon';
 import Button from '../../ui/Button';
 import DropdownMenu from '../../ui/DropdownMenu';
+import MediaEditor from '../../ui/MediaEditor';
 import MenuItem from '../../ui/MenuItem';
 import Modal from '../../ui/Modal';
 import AttachmentModalItem from './AttachmentModalItem';
@@ -173,6 +175,7 @@ const AttachmentModal: FC<OwnProps & StateProps> = ({
   const notEditingFile = isEditingMessageFile !== 'file';
 
   const [isSymbolMenuOpen, openSymbolMenu, closeSymbolMenu] = useFlag();
+  const [editingAttachmentIndex, setEditingAttachmentIndex] = useState<number | undefined>(undefined);
 
   const shouldSendCompressed = attachmentSettings.shouldCompress;
   const isSendingCompressed = Boolean(
@@ -416,6 +419,32 @@ const AttachmentModal: FC<OwnProps & StateProps> = ({
 
       return attachment;
     }));
+  });
+
+  const handleEdit = useLastCallback((index: number) => {
+    setEditingAttachmentIndex(index);
+  });
+
+  const handleCloseEditor = useLastCallback(() => {
+    setEditingAttachmentIndex(undefined);
+  });
+
+  const handleSaveEdit = useLastCallback(async (file: File) => {
+    if (editingAttachmentIndex === undefined) return;
+
+    const newAttachment = await buildAttachment(file.name, file, {
+      shouldSendAsSpoiler: attachments[editingAttachmentIndex].shouldSendAsSpoiler,
+      shouldSendInHighQuality: attachments[editingAttachmentIndex].shouldSendInHighQuality,
+    });
+
+    onAttachmentsUpdate(attachments.map((attachment, i) => {
+      if (i === editingAttachmentIndex) {
+        return newAttachment;
+      }
+      return attachment;
+    }));
+
+    setEditingAttachmentIndex(undefined);
   });
 
   const handleResize = useLastCallback(() => {
@@ -673,6 +702,7 @@ const AttachmentModal: FC<OwnProps & StateProps> = ({
               key={attachment.uniqueId || i}
               onDelete={handleDelete}
               onToggleSpoiler={handleToggleSpoiler}
+              onEdit={handleEdit}
             />
           ))}
         </div>
@@ -771,6 +801,14 @@ const AttachmentModal: FC<OwnProps & StateProps> = ({
           </div>
         </div>
       </div>
+      <MediaEditor
+        isOpen={editingAttachmentIndex !== undefined}
+        imageUrl={editingAttachmentIndex !== undefined
+          ? renderingAttachments[editingAttachmentIndex]?.blobUrl
+          : undefined}
+        onClose={handleCloseEditor}
+        onSave={handleSaveEdit}
+      />
     </Modal>
   );
 };
