@@ -8,6 +8,7 @@ import { getOwnerDisplayString } from '../../../../util/general';
 
 import useContextMenuHandlers from '../../../../../hooks/useContextMenuHandlers';
 
+import ParsedContent from '../../TelebizAgent/ParsedContent';
 import RelationshipItemContextMenu from '../RelationshipEntityContextMenu';
 
 import commonItemCardStyles from '../RelationshipEntityCard.module.scss';
@@ -39,7 +40,10 @@ const NoteCard = ({ note }: Props) => {
         </div>
       </div>
       <div className={commonItemCardStyles.itemBody}>
-        <div className={commonItemCardStyles.itemHighlight} dangerouslySetInnerHTML={{ __html: note.body }} />
+        <ParsedContent
+          content={note.body}
+          className={commonItemCardStyles.itemHighlight}
+        />
       </div>
       <div className={commonItemCardStyles.itemFooter}>
         {note.owner && (

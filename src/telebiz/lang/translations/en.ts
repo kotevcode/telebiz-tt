@@ -30,6 +30,28 @@ export const telebizEnglishTranslations = {
     + 'and muted to keep your main chat list clean.',
   'TelebizWelcome.GetStarted': 'Get Started',
   'TelebizWelcome.ContactUs': 'Contact Support',
+  // Landing Screen
+  'TelebizLanding.Title': 'Welcome to Telebiz',
+  'TelebizLanding.Description': 'Supercharge your Telegram with AI agents, CRM integration, and powerful business tools. Manage your business communications efficiently, all in one place.',
+  // Landing Features
+  TelebizFeatureAIAgentTitle: 'AI Agent',
+  TelebizFeatureAIAgentDescription: 'Chat with Claude, GPT, or Gemini to automate tasks and get intelligent assistance.',
+  TelebizFeatureCRMTitle: 'CRM Integration',
+  TelebizFeatureCRMDescription: 'Connect HubSpot and manage business relationships directly from Telegram.',
+  TelebizFeatureBulkMessagingTitle: 'Bulk Messaging',
+  TelebizFeatureBulkMessagingDescription: 'Send messages across multiple chats efficiently with smart delays.',
+  TelebizFeatureRemindersTitle: 'Smart Reminders',
+  TelebizFeatureRemindersDescription: 'Set reminders for important messages and never miss a follow-up.',
+  TelebizFeatureTemplatesTitle: 'Templates',
+  TelebizFeatureTemplatesDescription: 'Save and reuse message templates to speed up your workflow.',
+  TelebizFeatureMultiOrgTitle: 'Multi-Organization',
+  TelebizFeatureMultiOrgDescription: 'Manage multiple organizations and teams in one unified interface.',
+  // Landing CTA
+  'TelebizLanding.CTA.Title': 'Ready to supercharge your workflow?',
+  'TelebizLanding.CTA.Description': 'Start using Telebiz today and transform how you manage business communications.',
+  'TelebizLanding.CTA.StartChat': 'Start a Chat',
+  'TelebizLanding.CTA.TryAgent': 'Try AI Agent',
+  'TelebizLanding.CTA.LearnMore': 'Learn More',
   // Settings
   'Settings.Menu.Integrations': 'Integrations',
   'Settings.Menu.Organizations': 'Organizations',
@@ -141,6 +163,9 @@ export const telebizEnglishTranslations = {
   'RelationshipModal.Type': 'Type',
   'RelationshipModal.Phone': 'Phone',
   'RelationshipModal.Email': 'Email',
+  // Telebiz Relationship
+  'TelebizRelationship.ShowMoreFields': 'Show more fields',
+  'TelebizRelationship.ShowFewerFields': 'Show fewer fields',
   // Delete Relationship Item Confirmation Modal
   'DeleteRelationshipItemConfirmationModal.Title': '{action} {entity}',
   'DeleteRelationshipItemConfirmationModal.Description': 'Are you sure you want to {action} this {entity}?',

@@ -7,6 +7,7 @@ import type { FormField, FormFieldOption } from './forms';
 import { formatDateTime, toLocalISOString } from '../../../util/dates';
 
 import { useTelebizLang } from '../../../hooks/useTelebizLang';
+import useLastCallback from '../../../../hooks/useLastCallback';
 
 import CalendarModal from '../../../../components/common/CalendarModal';
 import Icon from '../../../../components/common/icons/Icon';
@@ -28,13 +29,13 @@ const EntityFormFields = ({ formFields, handleChange, form }: OwnProps) => {
 
   const [isCalendarOpened, setIsCalendarOpened] = useState<string | undefined>(undefined);
 
-  const closeCalendar = () => {
+  const closeCalendar = useLastCallback(() => {
     setIsCalendarOpened(undefined);
-  };
+  });
 
-  const openCalendar = (key: string) => {
+  const openCalendar = useLastCallback((key: string) => {
     setIsCalendarOpened(key);
-  };
+  });
 
   // Get options for a field, handling dependent fields
   const getFieldOptions = (field: FormField) => {
@@ -81,7 +82,6 @@ const EntityFormFields = ({ formFields, handleChange, form }: OwnProps) => {
                 <Icon
                   name="calendar"
                   className={styles.calendarIcon}
-                  onClick={() => openCalendar(field.name)}
                 />
               </div>
             );

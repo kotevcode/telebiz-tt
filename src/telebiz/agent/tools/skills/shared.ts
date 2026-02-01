@@ -285,6 +285,42 @@ export async function linkEntityToChat(
   const organizationId = selectCurrentTelebizOrganization(global)?.id;
   const user = isUserId(chatId) ? selectUser(global, chatId) : undefined;
 
+  // Validation with detailed error messages
+  if (!organizationId) {
+    return {
+      success: false,
+      error: 'No organization selected. User must be authenticated and have an organization.',
+    };
+  }
+
+  if (!integrationId || typeof integrationId !== 'number') {
+    return {
+      success: false,
+      error: `Invalid integrationId: ${integrationId}. Must be a number. Use listIntegrations to get valid IDs.`,
+    };
+  }
+
+  if (!chatId || typeof chatId !== 'string') {
+    return {
+      success: false,
+      error: `Invalid chatId: ${chatId}. Must be a string. Use getCurrentChat to get the current chat ID.`,
+    };
+  }
+
+  if (!entityType || !Object.values(ProviderEntityType).includes(entityType)) {
+    return {
+      success: false,
+      error: `Invalid entityType: ${entityType}. Must be one of: ${Object.values(ProviderEntityType).join(', ')}`,
+    };
+  }
+
+  if (!entityId || typeof entityId !== 'string') {
+    return {
+      success: false,
+      error: `Invalid entityId: ${entityId}. Must be a string.`,
+    };
+  }
+
   const { error } = await withErrorDetection(
     getPromiseActions().linkTelebizEntity({
       integrationId,
@@ -297,7 +333,19 @@ export async function linkEntityToChat(
   );
 
   if (error) {
-    return { success: false, error };
+    // Enhance error with debugging info
+    const debugInfo = [
+      `integrationId: ${integrationId} (${typeof integrationId})`,
+      `chatId: ${chatId} (${typeof chatId})`,
+      `entityType: ${entityType} (${typeof entityType})`,
+      `entityId: ${entityId} (${typeof entityId})`,
+      `organizationId: ${organizationId}`,
+    ].join(', ');
+
+    return {
+      success: false,
+      error: `${error}. Debug info: ${debugInfo}`,
+    };
   }
 
   return {

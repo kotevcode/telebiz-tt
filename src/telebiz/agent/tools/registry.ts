@@ -119,7 +119,8 @@ export const archiveChat: ToolDefinition = {
   type: 'function',
   function: {
     name: 'archiveChat',
-    description: 'Archive a chat to move it to the archived folder.',
+    description: 'Archive a SINGLE chat to move it to the archived folder. '
+      + 'IMPORTANT: For archiving multiple chats, you MUST use batchArchive instead.',
     parameters: {
       type: 'object',
       properties: {
@@ -250,7 +251,9 @@ export const sendMessage: ToolDefinition = {
   type: 'function',
   function: {
     name: 'sendMessage',
-    description: 'Send a text message to a chat. Supports Telegram markdown formatting.',
+    description: 'Send a text message to a SINGLE chat or forum topic. '
+      + 'IMPORTANT: For sending the same message to multiple chats, you MUST use batchSendMessage instead. '
+      + 'Supports Telegram markdown formatting.',
     parameters: {
       type: 'object',
       properties: {
@@ -273,8 +276,46 @@ export const sendMessage: ToolDefinition = {
           type: 'number',
           description: 'Optional message ID to reply to',
         },
+        threadId: {
+          type: 'number',
+          description: [
+            'Optional topic ID for forum groups. Get topic IDs from listForumTopics.',
+            'Use this to send messages to a specific topic/thread in a forum.',
+            'Omit to send to main chat (or General topic in forums).',
+          ].join(' '),
+        },
       },
       required: ['chatId', 'text'],
+    },
+  },
+};
+
+export const editMessage: ToolDefinition = {
+  type: 'function',
+  function: {
+    name: 'editMessage',
+    description: [
+      'Edit the text of a previously sent message.',
+      'You can only edit messages you sent (outgoing messages).',
+      'Messages can typically be edited within 48 hours of sending.',
+    ].join(' '),
+    parameters: {
+      type: 'object',
+      properties: {
+        chatId: {
+          type: 'string',
+          description: 'The ID of the chat containing the message',
+        },
+        messageId: {
+          type: 'number',
+          description: 'The ID of the message to edit',
+        },
+        newText: {
+          type: 'string',
+          description: 'The new message text. Supports same markdown as sendMessage.',
+        },
+      },
+      required: ['chatId', 'messageId', 'newText'],
     },
   },
 };
@@ -368,7 +409,8 @@ export const getRecentMessages: ToolDefinition = {
   function: {
     name: 'getRecentMessages',
     description: [
-      'Get messages from a chat. Returns message text, sender info, and timestamps.',
+      'Get messages from a chat or forum topic. Returns message text, sender info, and timestamps.',
+      'For forum groups, use listForumTopics first to get topic IDs, then pass threadId to read specific topics.',
       'Use offset to paginate through older messages.',
     ].join(' '),
     parameters: {
@@ -388,6 +430,36 @@ export const getRecentMessages: ToolDefinition = {
             'Number of messages to skip from most recent (default: 0).',
             'Use to paginate: offset=0 gets newest, offset=100 gets messages 101-200.',
           ].join(' '),
+        },
+        threadId: {
+          type: 'number',
+          description: 'Optional topic ID for forum groups. Get messages from specific topic.',
+        },
+      },
+      required: ['chatId'],
+    },
+  },
+};
+
+export const listForumTopics: ToolDefinition = {
+  type: 'function',
+  function: {
+    name: 'listForumTopics',
+    description: [
+      'Get all topics (threads) in a forum group.',
+      'Returns topic IDs, titles, pinned status, and metadata.',
+      'Use the topicId with sendMessage to send to specific topics.',
+    ].join(' '),
+    parameters: {
+      type: 'object',
+      properties: {
+        chatId: {
+          type: 'string',
+          description: 'The ID of the forum group chat',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of topics to return (default: 50, max: 100)',
         },
       },
       required: ['chatId'],
@@ -480,7 +552,9 @@ export const addChatToFolder: ToolDefinition = {
   type: 'function',
   function: {
     name: 'addChatToFolder',
-    description: 'Add a chat to one or more folders.',
+    description: 'Add a SINGLE chat to one or more folders. '
+      + 'IMPORTANT: For adding multiple chats to a folder, you MUST use batchAddToFolder instead. '
+      + 'Only use this tool when adding exactly one chat.',
     parameters: {
       type: 'object',
       properties: {
@@ -685,7 +759,9 @@ export const batchSendMessage: ToolDefinition = {
   type: 'function',
   function: {
     name: 'batchSendMessage',
-    description: 'Send the same message to multiple chats.',
+    description: 'Send the same message to multiple chats in one efficient operation. '
+      + 'ALWAYS use this tool when sending to 2 or more chats - never call sendMessage multiple times. '
+      + 'More efficient and avoids rate limits.',
     parameters: {
       type: 'object',
       properties: {
@@ -720,9 +796,10 @@ export const batchAddToFolder: ToolDefinition = {
   type: 'function',
   function: {
     name: 'batchAddToFolder',
-    description: 'Add multiple chats to an existing folder in a single operation. '
-      + 'Use this to add chats to a folder that already exists. '
-      + 'For new folders, prefer createFolder with includedChatIds instead of creating empty folder then using this.',
+    description: 'Add multiple chats to an existing folder in a single efficient operation. '
+      + 'ALWAYS use this tool when adding 2 or more chats to a folder - never call addChatToFolder multiple times. '
+      + 'This is more efficient and avoids rate limits. '
+      + 'For new folders, prefer createFolder with includedChatIds instead.',
     parameters: {
       type: 'object',
       properties: {
@@ -745,7 +822,9 @@ export const batchArchive: ToolDefinition = {
   type: 'function',
   function: {
     name: 'batchArchive',
-    description: 'Archive multiple chats at once.',
+    description: 'Archive multiple chats at once in one efficient operation. '
+      + 'ALWAYS use this tool when archiving 2 or more chats - never call archiveChat multiple times. '
+      + 'More efficient and avoids rate limits.',
     parameters: {
       type: 'object',
       properties: {
@@ -779,10 +858,12 @@ export const TOOL_CATEGORIES = {
   ],
   message: [
     sendMessage,
+    editMessage,
     forwardMessages,
     deleteMessages,
     searchMessages,
     getRecentMessages,
+    listForumTopics,
     markChatAsRead,
   ],
   folder: [
@@ -1081,6 +1162,7 @@ export const READ_ONLY_TOOLS: ToolDefinition[] = [
   getChatInfo,
   getCurrentChat,
   getRecentMessages,
+  listForumTopics,
   searchMessages,
   listFolders,
   getChatMembers,

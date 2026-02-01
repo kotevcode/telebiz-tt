@@ -733,6 +733,9 @@ addActionHandler('sendTelebizAgentMessage', async (global, actions, payload): Pr
           global = getGlobal();
           global = updateTelebizAgent(global, { error });
           setGlobal(global);
+          getActions().showNotification({
+            message: error,
+          });
         },
         onConfirmationRequired: (plan, confirmation) => {
           global = getGlobal();

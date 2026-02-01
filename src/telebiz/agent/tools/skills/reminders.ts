@@ -4,6 +4,8 @@ import type { Reminder } from '../../../services/types';
 import type { ExtraTool, ToolDefinition, ToolResult } from '../../types';
 
 import { selectChat } from '../../../../global/selectors';
+import { selectCurrentTelebizOrganization } from '../../../global/selectors';
+import { telebizApiClient } from '../../../services';
 
 // Reminders Tool Definitions
 const listReminders: ToolDefinition = {
@@ -167,7 +169,29 @@ export async function executeRemindersTool(
 
 function executeListReminders(chatId?: string): ToolResult {
   const global = getGlobal();
-  const reminders = global.telebiz?.reminders?.reminders || [];
+  const remindersState = global.telebiz?.reminders;
+
+  // Check if reminders are loading
+  if (remindersState?.isLoading) {
+    return {
+      success: true,
+      data: {
+        reminders: [],
+        count: 0,
+        note: 'Reminders are still loading. Try again in a moment.',
+      },
+    };
+  }
+
+  // Check for error state
+  if (remindersState?.error) {
+    return {
+      success: false,
+      error: `Failed to load reminders: ${remindersState.error}`,
+    };
+  }
+
+  const reminders = remindersState?.reminders || [];
 
   let filtered = reminders;
   if (chatId) {
@@ -183,78 +207,123 @@ function executeListReminders(chatId?: string): ToolResult {
   };
 }
 
-function executeCreateReminder(args: Record<string, unknown>): ToolResult {
-  const { createTelebizReminder } = getActions();
+async function executeCreateReminder(args: Record<string, unknown>): Promise<ToolResult> {
+  const { loadTelebizReminders } = getActions();
 
   const remindAt = parseRemindAt(args.remindAt as string);
   if (!remindAt) {
     return { success: false, error: `Could not parse reminder time: ${args.remindAt}` };
   }
 
-  createTelebizReminder({
-    chat_id: args.chatId as string,
-    message_id: args.messageId as string | undefined,
-    description: args.description as string,
-    remind_at: remindAt.toISOString(),
-  });
+  const global = getGlobal();
+  const organizationId = selectCurrentTelebizOrganization(global)?.id;
 
-  return {
-    success: true,
-    data: {
-      created: true,
-      chatId: args.chatId,
-      description: args.description,
-      remindAt: remindAt.toISOString(),
-    },
-  };
+  try {
+    const reminder = await telebizApiClient.reminders.createReminder({
+      chat_id: args.chatId as string,
+      message_id: args.messageId as string | undefined,
+      description: args.description as string,
+      remind_at: remindAt.toISOString(),
+      organization_id: organizationId,
+    });
+
+    // Refresh reminders list to update state
+    loadTelebizReminders({});
+
+    return {
+      success: true,
+      data: {
+        created: true,
+        reminderId: reminder.id,
+        chatId: args.chatId,
+        description: args.description,
+        remindAt: remindAt.toISOString(),
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to create reminder: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 }
 
-function executeCompleteReminder(reminderId: number): ToolResult {
-  const { completeTelebizReminder } = getActions();
+async function executeCompleteReminder(reminderId: number): Promise<ToolResult> {
+  const { loadTelebizReminders } = getActions();
 
-  completeTelebizReminder({ reminderId });
+  try {
+    await telebizApiClient.reminders.completeReminder(reminderId);
 
-  return {
-    success: true,
-    data: { completed: true, reminderId },
-  };
+    // Refresh reminders list to update state
+    loadTelebizReminders({});
+
+    return {
+      success: true,
+      data: { completed: true, reminderId },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to complete reminder: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 }
 
-function executeDeleteReminder(reminderId: number): ToolResult {
-  const { deleteTelebizReminder } = getActions();
+async function executeDeleteReminder(reminderId: number): Promise<ToolResult> {
+  const { loadTelebizReminders } = getActions();
 
-  deleteTelebizReminder({ reminderId });
+  try {
+    await telebizApiClient.reminders.deleteReminder(reminderId);
 
-  return {
-    success: true,
-    data: { deleted: true, reminderId },
-  };
+    // Refresh reminders list to update state
+    loadTelebizReminders({});
+
+    return {
+      success: true,
+      data: { deleted: true, reminderId },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to delete reminder: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 }
 
-function executeUpdateReminder(args: Record<string, unknown>): ToolResult {
-  const { updateTelebizReminder } = getActions();
+async function executeUpdateReminder(args: Record<string, unknown>): Promise<ToolResult> {
+  const { loadTelebizReminders } = getActions();
 
-  const data: Record<string, unknown> = {};
+  const updateData: Record<string, unknown> = {};
   if (args.description) {
-    data.description = args.description;
+    updateData.description = args.description;
   }
   if (args.remindAt) {
     const remindAt = parseRemindAt(args.remindAt as string);
     if (!remindAt) {
       return { success: false, error: `Could not parse reminder time: ${args.remindAt}` };
     }
-    data.remind_at = remindAt.toISOString();
+    updateData.remind_at = remindAt.toISOString();
   }
 
-  updateTelebizReminder({
-    reminderId: args.reminderId as number,
-    data,
-  });
+  try {
+    await telebizApiClient.reminders.updateReminder(
+      args.reminderId as number,
+      updateData,
+    );
 
-  return {
-    success: true,
-    data: { updated: true, reminderId: args.reminderId, ...data },
-  };
+    // Refresh reminders list to update state
+    loadTelebizReminders({});
+
+    return {
+      success: true,
+      data: { updated: true, reminderId: args.reminderId, ...updateData },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to update reminder: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 }
 
 // Helper to summarize a reminder for LLM

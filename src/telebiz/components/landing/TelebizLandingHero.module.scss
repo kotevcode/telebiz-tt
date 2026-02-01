@@ -1,0 +1,54 @@
+@use '../../styles/animations' as *;
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 1rem;
+
+  text-align: center;
+
+  @include animate-on-scroll;
+
+  &.isVisible {
+    animation: fadeInUp 0.4s ease-out 0.1s forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transform: none;
+    opacity: 1;
+    animation: none;
+  }
+}
+
+.icon {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1rem;
+
+  :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.title {
+  margin: 0 0 1rem;
+
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.description {
+  max-width: 40rem;
+  margin: 0;
+
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+}

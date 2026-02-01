@@ -9,6 +9,7 @@ import { getOwnerDisplayString } from '../../../../util/general';
 import useContextMenuHandlers from '../../../../../hooks/useContextMenuHandlers';
 
 import ItemStatusChip from '../EntityStatusChip';
+import ParsedContent from '../../TelebizAgent/ParsedContent';
 import RelationshipItemContextMenu from '../RelationshipEntityContextMenu';
 
 import commonItemCardStyles from '../RelationshipEntityCard.module.scss';
@@ -85,7 +86,10 @@ const TaskCard = ({ task }: Props) => {
       {
         task.body && (
           <div className={commonItemCardStyles.itemBody}>
-            <div className={commonItemCardStyles.itemHighlight} dangerouslySetInnerHTML={{ __html: task.body }} />
+            <ParsedContent
+              content={task.body}
+              className={commonItemCardStyles.itemHighlight}
+            />
           </div>
         )
       }

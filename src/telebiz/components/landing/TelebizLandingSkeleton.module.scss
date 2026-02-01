@@ -1,0 +1,70 @@
+@use '../../styles/animations' as *;
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.skeletonHero {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.skeletonIcon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+
+  @include shimmer-effect;
+}
+
+.skeletonTitle {
+  width: 20rem;
+  max-width: 90%;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+
+  @include shimmer-effect;
+}
+
+.skeletonDescription {
+  width: 40rem;
+  max-width: 90%;
+  height: 1.5rem;
+  border-radius: 0.5rem;
+
+  @include shimmer-effect;
+}
+
+.skeletonFeatures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.skeletonCard {
+  height: 12rem;
+  border-radius: 0.75rem;
+
+  @include shimmer-effect;
+}
+
+// Mobile responsiveness
+@media (max-width: 600px) {
+  .skeleton {
+    padding: 1rem;
+  }
+
+  .skeletonFeatures {
+    grid-template-columns: 1fr;
+  }
+}

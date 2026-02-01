@@ -1,21 +1,26 @@
 import { memo, useCallback, useEffect, useState } from '../../../../lib/teact/teact';
 import { getActions, getPromiseActions, withGlobal } from '../../../../global';
 
-import type { Organization, ProviderEntity, ProviderEntityParent, ProviderRelationship } from '../../../services/types';
+import type {
+  Organization,
+  PropertiesByEntityType,
+  ProviderEntity,
+  ProviderEntityParent,
+  ProviderRelationship,
+} from '../../../services/types';
 import { TelebizPanelScreens } from '../types';
 
 import { selectCurrentMessageList } from '../../../../global/selectors';
 import {
   selectCurrentTelebizOrganization,
   selectTelebizEntity,
+  selectTelebizProperties,
   selectTelebizSelectedRelationship,
 } from '../../../global/selectors';
 import { isJsonString, parseJsonMessage } from '../../../util/general';
 import { type CreateProviderEntityData, ProviderEntityType } from '../../../services';
 
-import CreateCompanyForm from '../TelebizAddRelationship/CreateEntityForm/CreateCompanyForm';
-import CreateContactForm from '../TelebizAddRelationship/CreateEntityForm/CreateContactForm';
-import CreateDealForm from '../TelebizAddRelationship/CreateEntityForm/CreateDealForm';
+import CreateCrmEntityForm from '../TelebizAddRelationship/CreateEntityForm/CreateCrmEntityForm';
 import RelationshipLinkView from '../TelebizAddRelationship/RelationshipLinkView';
 
 import styles from '../TelebizAddRelationship/TelebizAddRelationship.module.scss';
@@ -31,6 +36,8 @@ type StateProps = {
   selectedRelationship?: ProviderRelationship;
   parentEntity?: ProviderEntity;
   currentOrganization?: Organization;
+  provider?: string;
+  properties: PropertiesByEntityType[];
 };
 
 const CreateAndAssociateEntity = ({
@@ -41,10 +48,13 @@ const CreateAndAssociateEntity = ({
   selectedRelationship,
   parentEntity,
   currentOrganization,
+  provider,
+  properties,
 }: OwnProps & StateProps) => {
   const { openTelebizPanelScreen } = getActions();
 
   const [createError, setCreateError] = useState<string | undefined>(undefined);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (!selectedRelationship || !chatId) {
@@ -64,6 +74,7 @@ const CreateAndAssociateEntity = ({
       parentEntityType: selectedRelationship.entity_type,
     };
 
+    setIsCreating(true);
     try {
       await getPromiseActions().createTelebizAssociation({
         data: createData,
@@ -76,6 +87,7 @@ const CreateAndAssociateEntity = ({
       openTelebizPanelScreen({ screen: TelebizPanelScreens.Main });
       setCreateError(undefined);
     } catch (error) {
+      setIsCreating(false);
       if (typeof error === 'object' && error && 'message' in error && error.message
         && typeof error.message === 'string' && isJsonString(error.message)) {
         const parsedMessage = JSON.parse(error.message).message;
@@ -102,27 +114,18 @@ const CreateAndAssociateEntity = ({
     <div className={styles.container}>
       <div className={styles.content}>
         <RelationshipLinkView parentEntity={parentEntity} parentEntityType={selectedRelationship?.entity_type}>
-          {entityType === ProviderEntityType.Deal && (
-            <CreateDealForm
-              initialTitle={searchQuery}
+          {(entityType === ProviderEntityType.Deal
+            || entityType === ProviderEntityType.Contact
+            || entityType === ProviderEntityType.Company) && (
+            <CreateCrmEntityForm
+              initialValue={searchQuery}
+              entityType={entityType}
+              provider={provider}
+              properties={properties}
               onCreate={handleCreate}
               error={createError}
               integrationId={selectedRelationship?.integration_id}
-            />
-          )}
-          {entityType === ProviderEntityType.Contact && (
-            <CreateContactForm
-              initialName={searchQuery}
-              onCreate={handleCreate}
-              error={createError}
-            />
-          )}
-          {entityType === ProviderEntityType.Company && (
-            <CreateCompanyForm
-              initialName={searchQuery}
-              onCreate={handleCreate}
-              error={createError}
-              integrationId={selectedRelationship?.integration_id}
+              isLoading={isCreating}
             />
           )}
         </RelationshipLinkView>
@@ -147,10 +150,14 @@ export default memo(withGlobal<OwnProps>(
       );
     }
 
+    const integrationId = selectedRelationship?.integration_id;
+
     return {
       selectedRelationship,
       parentEntity,
       currentOrganization: selectCurrentTelebizOrganization(global),
+      provider: parentEntity?.provider,
+      properties: integrationId ? selectTelebizProperties(global, integrationId) : [],
     };
   },
 )(CreateAndAssociateEntity));

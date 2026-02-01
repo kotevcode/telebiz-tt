@@ -1,13 +1,15 @@
 import type { FC } from '../../../../lib/teact/teact';
-import { memo, useEffect } from '../../../../lib/teact/teact';
+import { memo, useEffect, useState } from '../../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../../global';
 
-import type { Integration, Organization } from '../../../services/types';
+import type { Integration, Organization, PropertiesByEntityType } from '../../../services/types';
 import { TelebizPanelScreens } from '../types';
 
+import { DEBUG } from '../../../../config';
 import { selectUser } from '../../../../global/selectors';
 import {
   selectCurrentTelebizOrganization,
+  selectTelebizProperties,
   selectTelebizSelectedIntegration,
   selectTelebizSelectedIntegrationId,
 } from '../../../global/selectors';
@@ -17,9 +19,7 @@ import { telebizApiClient } from '../../../services';
 
 import useLastCallback from '../../../../hooks/useLastCallback';
 
-import CreateCompanyForm from './CreateEntityForm/CreateCompanyForm';
-import CreateContactForm from './CreateEntityForm/CreateContactForm';
-import CreateDealForm from './CreateEntityForm/CreateDealForm';
+import CreateCrmEntityForm from './CreateEntityForm/CreateCrmEntityForm';
 import CreatePageForm from './CreateEntityForm/CreatePageForm';
 import RelationshipLinkView from './RelationshipLinkView';
 
@@ -36,6 +36,8 @@ type StateProps = {
   currentOrganization?: Organization;
   selectedIntegrationId?: number;
   selectedIntegration?: Integration;
+  provider?: string;
+  properties: PropertiesByEntityType[];
 };
 
 const CreateEntity: FC<OwnProps & StateProps> = ({
@@ -46,12 +48,16 @@ const CreateEntity: FC<OwnProps & StateProps> = ({
   currentOrganization,
   selectedIntegrationId,
   selectedIntegration,
+  provider,
+  properties,
 }) => {
   const {
     openTelebizPanelScreen,
     setTelebizIsAddingRelationship,
     addTelebizRelationship,
   } = getActions();
+
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (!selectedIntegrationId || !chatId) {
@@ -73,10 +79,13 @@ const CreateEntity: FC<OwnProps & StateProps> = ({
       organizationId: currentOrganization?.id,
     };
 
+    setIsCreating(true);
     try {
       // Create the entity
       const entity = await telebizApiClient.integrations.createProviderEntity(createData);
-      if (!entity || !selectedIntegrationId) return;
+      if (!entity || !selectedIntegrationId) {
+        return;
+      }
 
       // Add sync timestamp
       entity.lastSyncAt = Date.now();
@@ -97,22 +106,43 @@ const CreateEntity: FC<OwnProps & StateProps> = ({
       setTelebizIsAddingRelationship({ isAdding: false });
       setSearchQuery('');
       openTelebizPanelScreen({ screen: TelebizPanelScreens.Main });
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e);
+    } catch (error) {
+      // Error will be shown by global error handler
+      // Log for debugging purposes
+      if (DEBUG) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to create entity:', error);
+      }
+    } finally {
+      setIsCreating(false);
     }
   });
 
   const renderForm = useLastCallback(() => {
     switch (entityType) {
       case ProviderEntityType.Page:
-        return <CreatePageForm initialTitle={searchQuery} onCreate={handleCreate} />;
+        return (
+          <CreatePageForm
+            initialTitle={searchQuery}
+            provider={provider}
+            properties={properties}
+            onCreate={handleCreate}
+            isLoading={isCreating}
+          />
+        );
       case ProviderEntityType.Deal:
-        return <CreateDealForm initialTitle={searchQuery} onCreate={handleCreate} />;
       case ProviderEntityType.Contact:
-        return <CreateContactForm initialName={searchQuery} onCreate={handleCreate} />;
       case ProviderEntityType.Company:
-        return <CreateCompanyForm initialName={searchQuery} onCreate={handleCreate} />;
+        return (
+          <CreateCrmEntityForm
+            initialValue={searchQuery}
+            entityType={entityType}
+            provider={provider}
+            properties={properties}
+            onCreate={handleCreate}
+            isLoading={isCreating}
+          />
+        );
       default:
         return undefined;
     }
@@ -130,9 +160,16 @@ const CreateEntity: FC<OwnProps & StateProps> = ({
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global): StateProps => ({
-    currentOrganization: selectCurrentTelebizOrganization(global),
-    selectedIntegrationId: selectTelebizSelectedIntegrationId(global),
-    selectedIntegration: selectTelebizSelectedIntegration(global),
-  }),
+  (global): StateProps => {
+    const selectedIntegration = selectTelebizSelectedIntegration(global);
+    const selectedIntegrationId = selectTelebizSelectedIntegrationId(global);
+
+    return {
+      currentOrganization: selectCurrentTelebizOrganization(global),
+      selectedIntegrationId,
+      selectedIntegration,
+      provider: selectedIntegration?.provider.type,
+      properties: selectedIntegrationId ? selectTelebizProperties(global, selectedIntegrationId) : [],
+    };
+  },
 )(CreateEntity));

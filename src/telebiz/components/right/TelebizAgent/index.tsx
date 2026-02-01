@@ -102,6 +102,7 @@ const TelebizAgent: FC<StateProps> = ({
     cancelTelebizAgentPlan,
     stopTelebizAgentExecution,
     createAgentConversation,
+    clearTelebizAgentError,
   } = getActions();
 
   const [inputValue, setInputValue] = useState('');
@@ -348,6 +349,20 @@ const TelebizAgent: FC<StateProps> = ({
           </>
         )}
       </div>
+
+      {error && (
+        <div className={styles.errorBanner}>
+          <span>{error}</span>
+          <button
+            type="button"
+            className={styles.dismissError}
+            onClick={clearTelebizAgentError}
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className={styles.inputContainer}>
         <MentionTooltip
