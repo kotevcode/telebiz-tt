@@ -74,6 +74,8 @@ addActionHandler('loadTelebizOrganizations', async (global): Promise<void> => {
       loadTelebizUserSettings,
       loadTelebizAllChatSettings,
       syncTelebizChatActivities,
+      loadTelebizSubscription,
+      loadTelebizPlans,
     } = getActions();
 
     loadTelebizIntegrations();
@@ -82,6 +84,8 @@ addActionHandler('loadTelebizOrganizations', async (global): Promise<void> => {
     loadTelebizUserSettings();
     loadTelebizAllChatSettings();
     syncTelebizChatActivities();
+    loadTelebizSubscription();
+    loadTelebizPlans();
 
     // Ensure providers are loaded (they might not be if this is a fresh org)
     const { providers } = selectTelebizIntegrations(getGlobal());
@@ -154,6 +158,8 @@ addActionHandler('switchTelebizOrganization', async (global, actions, payload): 
       loadTelebizReminders,
       loadTelebizUserSettings,
       loadTelebizAllChatSettings,
+      loadTelebizSubscription,
+      loadTelebizPlans,
     } = getActions();
 
     loadTelebizIntegrations();
@@ -162,6 +168,8 @@ addActionHandler('switchTelebizOrganization', async (global, actions, payload): 
     loadTelebizReminders();
     loadTelebizUserSettings();
     loadTelebizAllChatSettings();
+    loadTelebizSubscription();
+    loadTelebizPlans();
 
     // Ensure providers are loaded (they might not be if this is a fresh org)
     const { providers: currentProviders } = selectTelebizIntegrations(getGlobal());
@@ -267,6 +275,9 @@ addActionHandler('updateTelebizOrganizationData', async (global, actions, payloa
     setGlobal(global);
 
     getActions().resetPendingTelebizOrganization();
+
+    // Refresh subscription to get updated seat count
+    getActions().loadTelebizOrgSubscription({ organizationId });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to update organization';
     global = getGlobal();

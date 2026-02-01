@@ -3,6 +3,7 @@ import { addActionHandler, getGlobal, setGlobal } from '../../../global';
 import type { ForwardMessagesParams } from '../../../types';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
+import { checkSubscriptionGate } from './subscriptionGate';
 import { selectChat, selectChatLastMessageId, selectChatMessages } from '../../../global/selectors';
 import { selectIsCurrentUserPremium } from '../../../global/selectors/users';
 import { pause } from '../../../util/schedulers';
@@ -18,6 +19,8 @@ import {
 let isCancelled = false;
 
 addActionHandler('startTelebizBulkSend', async (global, actions, payload): Promise<void> => {
+  if (!checkSubscriptionGate()) return;
+
   const {
     sourceChatId, messageIds, targetChatIds, delayMs,
   } = payload;

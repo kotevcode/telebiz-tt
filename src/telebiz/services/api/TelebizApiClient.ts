@@ -8,6 +8,7 @@ import { NotificationsApiClient } from './NotificationsApiClient';
 import { OrganizationsApiClient } from './OrganizationsApiClient';
 import { RemindersApiClient } from './RemindersApiClient';
 import { SettingsApiClient } from './SettingsApiClient';
+import { SubscriptionApiClient } from './SubscriptionApiClient';
 import { TemplatesApiClient } from './TemplatesApiClient';
 import { TemplatesChatsApiClient } from './TemplatesChatsApiClient';
 
@@ -25,6 +26,7 @@ export class TelebizApiClient extends BaseApiClient {
   public notifications: NotificationsApiClient;
   public templatesChats: TemplatesChatsApiClient;
   public settings: SettingsApiClient;
+  public subscription: SubscriptionApiClient;
 
   constructor(config: Partial<TelebizApiConfig> = {}) {
     super(config);
@@ -39,6 +41,7 @@ export class TelebizApiClient extends BaseApiClient {
     this.notifications = new NotificationsApiClient(config);
     this.templatesChats = new TemplatesChatsApiClient(config);
     this.settings = new SettingsApiClient(config);
+    this.subscription = new SubscriptionApiClient(config);
     // Share token state across all clients
     this.syncTokenState();
   }
@@ -57,6 +60,7 @@ export class TelebizApiClient extends BaseApiClient {
       this.reminders,
       this.notifications,
       this.settings,
+      this.subscription,
     ];
 
     // Override the setTokens method to sync across all clients

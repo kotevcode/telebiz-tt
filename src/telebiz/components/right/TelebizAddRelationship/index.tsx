@@ -15,6 +15,7 @@ import {
 } from '../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 
+import SubscriptionBanner from '../../common/SubscriptionBanner';
 import Button from '../../../../components/ui/Button';
 import Loading from '../../../../components/ui/Loading';
 import TelebizIntegrationsDropdown from '../TelebizIntegrationsDropdown';
@@ -119,6 +120,7 @@ const TelebizAddRelationship: FC<OwnProps & StateProps> = ({
 
   return (
     <div className={styles.container}>
+      <SubscriptionBanner />
       <div className={styles.content}>
         {hasStepsToComplete ? (
           <CompleteSteps selectedIntegrationId={selectedIntegrationId} />

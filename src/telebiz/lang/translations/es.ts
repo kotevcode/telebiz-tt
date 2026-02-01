@@ -38,6 +38,14 @@ export const telebizSpanishTranslations = {
   'Settings.Menu.Faq': 'Preguntas Frecuentes',
   'Settings.Menu.PrivacyPolicy': 'Política de Privacidad',
   'Settings.Menu.TemplatesChats': 'Chats de Plantillas',
+  // Billing
+  'Billing.Monthly': 'Mensual',
+  'Billing.Annual': 'Anual',
+  'Billing.SavePercent': 'Ahorra {percent}%',
+  'Billing.LaunchOffer': 'Oferta de Lanzamiento',
+  'Billing.MoreFeatures': 'más',
+  'Billing.IncludedFeatures': 'Características Incluidas',
+  'Billing.SelectPlan': 'Seleccionar Plan',
   // Templates Chats
   'TemplatesChats.Description': 'Chats de Plantillas',
   'TemplatesChats.AddChats': 'Agregar Chats',
@@ -196,8 +204,16 @@ export const telebizSpanishTranslations = {
   'TelebizRelationshipsList.AddRelationship': 'Agregar relación',
   // Agent
   'Agent.Title': 'Agente',
-  'Agent.SetupRequired': 'Conectar OpenRouter',
-  'Agent.SetupDescription': 'Conecta tu cuenta de OpenRouter para comenzar a usar el agente.',
+  'CompleteSteps.Description': 'Para poder usar Telebiz, necesitas completar los siguientes pasos:',
+  'CompleteSteps.JoinWorkspace': 'Únete a un espacio de trabajo',
+  'CompleteSteps.Workspaces': 'Espacios de trabajo',
+  'CompleteSteps.ConnectProvider': 'Conectar un proveedor',
+  'CompleteSteps.ConnectAIProvider': 'Conectar un proveedor de IA',
+  'CompleteSteps.Integrations': 'Integraciones',
+  'CompleteSteps.AIIntegrations': 'Integraciones de IA',
+  'CompleteSteps.TelebizSettings': 'Configuración de Telebiz',
+  'Agent.SetupRequired': 'Configuración Requerida',
+  'Agent.SetupDescription': 'Para comenzar a usar el agente de IA, únete a una organización y conecta un proveedor de IA.',
   'Agent.ConnectOpenRouter': 'Conectar OpenRouter',
   'Agent.Connecting': 'Conectando...',
   'Agent.Welcome': '¿Cómo puedo ayudarte?',
@@ -335,4 +351,12 @@ export const telebizSpanishTranslations = {
   'Gemini.Integration.ApiKeyHint': 'Tu clave API se almacena de forma segura en tu navegador y nunca se envía a nuestros servidores.',
   'Gemini.Integration.ConnectButton': 'Conectar Gemini',
   'Gemini.Integration.ConnectedDescription': 'Tu API de Gemini está conectada y lista para usar.',
+  // Trial Pane (expired)
+  'TrialPane.TitleUrgent': 'Tu prueba termina pronto',
+  'TrialPane.Expired': 'Suscripción Expirada',
+  'TrialPane.ContactOwner': 'Contacta al propietario de tu espacio de trabajo para renovar',
+  // Subscription Banner
+  'SubscriptionBanner.Message': 'Tu suscripción ha expirado. Suscríbete para seguir usando las funciones de Telebiz.',
+  'SubscriptionBanner.ContactOwner': 'Tu suscripción ha expirado. Contacta al propietario de tu espacio de trabajo para renovar.',
+  'SubscriptionBanner.Action': 'Elegir Plan',
 };

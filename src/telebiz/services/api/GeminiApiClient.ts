@@ -149,9 +149,13 @@ export class GeminiApiClient {
           }
         }
 
+        if (parts.length === 0) {
+          return undefined;
+        }
+
         return {
           role: 'model' as const,
-          parts: parts.length > 0 ? parts : [{ text: '' }],
+          parts,
         };
       }
 
@@ -159,7 +163,7 @@ export class GeminiApiClient {
         role: 'user' as const,
         parts: [{ text: msg.content }],
       };
-    });
+    }).filter(Boolean);
 
     // Build request body
     const requestBody: Record<string, unknown> = {

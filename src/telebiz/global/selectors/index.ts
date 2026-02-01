@@ -7,3 +7,4 @@ export * from './reminders';
 export * from './templatesChats';
 export * from './agent';
 export * from './settings';
+export * from './subscription';

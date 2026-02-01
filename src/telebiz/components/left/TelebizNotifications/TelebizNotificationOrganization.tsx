@@ -54,7 +54,7 @@ const TelebizNotificationOrganization = ({
     onClick?.(notification.id.toString());
 
     openTelebizSettingsScreen({
-      screen: TelebizSettingsScreens.Organizations,
+      screen: TelebizSettingsScreens.Main,
     });
   }, [notification, markTelebizNotificationRead, onClick, openTelebizSettingsScreen]);
 

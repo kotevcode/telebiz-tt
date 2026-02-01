@@ -8,7 +8,9 @@ import { TelebizSettingsScreens } from '../types';
 
 import { selectTabState } from '../../../../global/selectors';
 import {
-  selectIsTelebizAgentConnected,
+  selectCurrentTelebizOrganization,
+  selectIsAnyAIProviderConnected,
+  selectTelebizIsSubscriptionActive,
   selectTelebizNotifications,
   selectTelebizOrganizations,
 } from '../../../global/selectors';
@@ -29,7 +31,9 @@ type StateProps = {
   isTelebizPanelOpen?: boolean;
   isFocusModeActive: boolean;
   focusModeChatsCount: number;
-  isOpenRouterConnected: boolean;
+  isProviderConnected: boolean;
+  hasOrganization: boolean;
+  isSubscriptionActive: boolean;
 };
 
 const TelebizDrawer = ({
@@ -38,7 +42,9 @@ const TelebizDrawer = ({
   isTelebizPanelOpen,
   isFocusModeActive,
   focusModeChatsCount,
-  isOpenRouterConnected,
+  isProviderConnected,
+  hasOrganization,
+  isSubscriptionActive,
 }: StateProps) => {
   const {
     openLeftColumnContent,
@@ -71,7 +77,7 @@ const TelebizDrawer = ({
         ariaLabel="AI Agent"
       >
         <AgentMode />
-        {!isOpenRouterConnected && (
+        {(!hasOrganization || !isProviderConnected || !isSubscriptionActive) && (
           <div className={buildClassName(styles.hasNotifications, styles.hasNotificationsWarning)} />
         )}
       </Button>
@@ -115,6 +121,8 @@ export default memo(withGlobal((global): StateProps => {
     isFocusModeActive: tabState.leftColumn.contentKey === LeftColumnContent.Telebiz
       && tabState.leftColumn.telebizSettingsScreen === TelebizSettingsScreens.FocusMode,
     focusModeChatsCount: notificationsState.pendingCount,
-    isOpenRouterConnected: selectIsTelebizAgentConnected(global),
+    isProviderConnected: selectIsAnyAIProviderConnected(global),
+    hasOrganization: Boolean(selectCurrentTelebizOrganization(global)),
+    isSubscriptionActive: selectTelebizIsSubscriptionActive(global),
   };
 })(TelebizDrawer));

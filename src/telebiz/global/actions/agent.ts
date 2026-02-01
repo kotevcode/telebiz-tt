@@ -4,6 +4,7 @@ import type { ActionReturnType } from '../../../global/types';
 import type { AgentConversation, AgentMessage, AIProvider } from '../../agent/types';
 import type { AgentMode } from '../types';
 
+import { checkSubscriptionGate } from './subscriptionGate';
 import { logDebugMessage } from '../../../util/debugConsole';
 import generateUniqueId from '../../../util/generateUniqueId';
 import { startMcpBridge, stopMcpBridge } from '../../agent/mcp/bridge';
@@ -622,6 +623,8 @@ addActionHandler('deleteAgentConversation', (global, _actions, payload): ActionR
 // ============================================================================
 
 addActionHandler('sendTelebizAgentMessage', async (global, actions, payload): Promise<void> => {
+  if (!checkSubscriptionGate()) return;
+
   const { message } = payload;
   const agentState = selectTelebizAgent(global);
   const { activeProvider } = agentState;

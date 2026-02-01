@@ -11,7 +11,9 @@ import type {
 import type { TelebizSettingsScreens } from '../../components/left/types';
 import type { TelebizPanelScreens } from '../../components/right/types';
 import type {
+  CanCreateOrgResponse,
   ChatFollowupSettings,
+  CheckoutData,
   CreateOrganizationData,
   CreateProviderEntityData,
   CreateReminderData,
@@ -261,6 +263,22 @@ export interface TelebizActionPayloads {
   };
   syncTelebizChatActivities: undefined;
   clearTelebizSettingsError: undefined;
+
+  // Telebiz Subscription
+  loadTelebizSubscription: undefined;
+  loadTelebizOrgSubscription: { organizationId: number };
+  loadTelebizPlans: undefined;
+  setTelebizSelectedPlan: { planId: string | undefined };
+  createTelebizCheckout: CheckoutData & { organizationId: number };
+  openTelebizPortal: { organizationId: number };
+  cancelTelebizSubscription: { organizationId: number };
+  resumeTelebizSubscription: { organizationId: number };
+  syncTelebizSubscriptionSeats: { organizationId: number };
+  upgradeTelebizSubscription: { organizationId: number; planType: string };
+  openTelebizSubscriptionBlockedModal: undefined;
+  closeTelebizSubscriptionBlockedModal: undefined;
+  clearTelebizSubscriptionError: undefined;
+  checkCanCreateOrg: { onResult?: (result: CanCreateOrgResponse) => void };
 
   // Telebiz MCP Bridge
   enableMcpBridge: undefined;

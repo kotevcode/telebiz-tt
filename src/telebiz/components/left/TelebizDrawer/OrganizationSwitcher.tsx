@@ -13,21 +13,34 @@ import buildClassName from '../../../../util/buildClassName';
 import useLastCallback from '../../../../hooks/useLastCallback';
 
 import Avatar from '../../../../components/common/Avatar';
+import Icon from '../../../../components/common/icons/Icon';
 import DropdownMenu from '../../../../components/ui/DropdownMenu';
 import MenuItem from '../../../../components/ui/MenuItem';
+import MenuSeparator from '../../../../components/ui/MenuSeparator';
 
 import styles from './TelebizDrawer.module.scss';
+
+type OwnProps = {
+  positionX?: 'left' | 'right';
+  positionY?: 'top' | 'bottom';
+};
 
 type StateProps = {
   organizations: TelebizOrganizationsState;
   currentOrganization?: Organization;
 };
 
-const OrganizationSwitcher = ({ organizations, currentOrganization }: StateProps) => {
+const OrganizationSwitcher = ({
+  organizations,
+  currentOrganization,
+  positionX = 'left',
+  positionY = 'bottom',
+}: OwnProps & StateProps) => {
   const {
     switchTelebizOrganization,
     openLeftColumnContent,
     openTelebizSettingsScreen,
+    resetPendingTelebizOrganization,
   } = getActions();
   const handleOrganizationSwitch = useLastCallback((organization: Organization) => {
     switchTelebizOrganization({ organization });
@@ -50,8 +63,8 @@ const OrganizationSwitcher = ({ organizations, currentOrganization }: StateProps
   return (
     <DropdownMenu
       trigger={OrganizationMenuButton}
-      positionX="left"
-      positionY="bottom"
+      positionX={positionX}
+      positionY={positionY}
     >
       {organizations.organizations.map((organization) => (
         <MenuItem
@@ -68,12 +81,17 @@ const OrganizationSwitcher = ({ organizations, currentOrganization }: StateProps
             text={organization.name}
           />
           <span>{organization.name}</span>
+          {
+            organization.id === currentOrganization?.id && <Icon name="check" className="submenu-icon" />
+          }
         </MenuItem>
       ))}
+      <MenuSeparator />
       <MenuItem
         onClick={() => {
           openLeftColumnContent({ contentKey: LeftColumnContent.Telebiz });
-          openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Organizations });
+          resetPendingTelebizOrganization();
+          openTelebizSettingsScreen({ screen: TelebizSettingsScreens.OrganizationsCreate });
         }}
         icon="add"
       >
@@ -83,7 +101,7 @@ const OrganizationSwitcher = ({ organizations, currentOrganization }: StateProps
   );
 };
 
-export default memo(withGlobal((global): StateProps => {
+export default memo(withGlobal<OwnProps>((global): StateProps => {
   return {
     organizations: selectTelebizOrganizations(global),
     currentOrganization: selectCurrentTelebizOrganization(global),

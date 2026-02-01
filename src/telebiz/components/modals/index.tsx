@@ -1,6 +1,7 @@
 import ConfirmAgentModal from './ConfirmAgentModal/ConfirmAgentModalContainer';
 import ConfirmDeleteDialog from './ConfirmRelationshipEntityDeleteDialog/ConfirmDeleteDialogContainer';
 import RemoveEntityFromChatDialog from './RemoveEntityFromChatDialog/RemoveEntityFromChatDialogContainer';
+import SubscriptionBlockedModal from './SubscriptionBlockedModal/SubscriptionBlockedModalContainer';
 import TelebizFeaturesModal from './TelebizFeaturesModal/TelebizFeaturesModalContainer';
 import TelebizRelationshipModal from './TelebizRelationshipModal/TelebizRelationshipModalContainer';
 import TelebizReminderModal from './TelebizReminderModal/TelebizReminderModalContainer';
@@ -18,6 +19,7 @@ const TelebizModals = () => {
       <ConfirmAgentModal />
       <ConfirmDeleteDialog />
       <RemoveEntityFromChatDialog />
+      <SubscriptionBlockedModal />
     </>
   );
 };

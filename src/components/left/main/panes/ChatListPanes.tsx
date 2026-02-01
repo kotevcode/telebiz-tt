@@ -16,6 +16,7 @@ import useShowTransition from '../../../../hooks/useShowTransition';
 import { useSignalEffect } from '../../../../hooks/useSignalEffect';
 import { applyAnimationState, type PaneState } from '../../../middle/hooks/useHeaderPane';
 
+import TrialPane from '../../../../telebiz/components/common/TrialPane';
 import FrozenAccountPane from './FrozenAccountPane';
 import SuggestionPane from './SuggestionPane';
 import UnconfirmedSessionPane from './UnconfirmedSessionPane';
@@ -47,6 +48,7 @@ const ChatListPanes = ({
   const [getUnconfirmedSessionHeight, setUnconfirmedSessionHeight] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getFrozenAccountState, setFrozenAccountState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getSuggestionState, setSuggestionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
+  const [getTrialState, setTrialState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
 
   const isFirstRenderRef = useRef(true);
   const {
@@ -77,9 +79,10 @@ const ChatListPanes = ({
     const unconfirmedSessionHeight = getUnconfirmedSessionHeight();
     const frozenAccountHeight = getFrozenAccountState();
     const suggestionHeight = getSuggestionState();
+    const trialHeight = getTrialState();
 
     // Keep in sync with the order of the panes in the DOM
-    const stateArray = [unconfirmedSessionHeight, frozenAccountHeight, suggestionHeight];
+    const stateArray = [trialHeight, unconfirmedSessionHeight, frozenAccountHeight, suggestionHeight];
 
     const isFirstRender = isFirstRenderRef.current;
     const panelsHeight = stateArray.reduce((acc, state) => acc + state.height, 0);
@@ -102,7 +105,7 @@ const ChatListPanes = ({
         '--chat-list-panes-height': `${totalHeight}px`,
       });
     });
-  }, [getUnconfirmedSessionHeight, getFrozenAccountState, getSuggestionState]);
+  }, [getTrialState, getUnconfirmedSessionHeight, getFrozenAccountState, getSuggestionState]);
 
   if (!shouldRender) return undefined;
 
@@ -116,6 +119,9 @@ const ChatListPanes = ({
         )
       }
     >
+      <TrialPane
+        onPaneStateChange={setTrialState}
+      />
       <FrozenAccountPane
         isAccountFrozen={isAccountFrozen}
         onPaneStateChange={setFrozenAccountState}

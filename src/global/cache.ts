@@ -540,6 +540,13 @@ function reduceTelebiz(telebiz: TelebizState): TelebizState {
       isLoading: false,
       error: undefined,
     },
+    subscription: {
+      ...telebiz.subscription,
+      subscriptionsByOrgId: telebiz.subscription?.subscriptionsByOrgId || {},
+      isLoading: false,
+      isLoadingPlans: false,
+      error: undefined,
+    },
     bulkSend: {
       isActive: false,
       targets: [],

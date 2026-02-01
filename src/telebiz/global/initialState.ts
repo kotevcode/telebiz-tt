@@ -104,6 +104,12 @@ export const INITIAL_TELEBIZ_STATE: TelebizState = {
     isSyncing: false,
     lastSyncByChatId: {},
   },
+  subscription: {
+    subscriptionsByOrgId: {},
+    plans: [],
+    isLoading: false,
+    isLoadingPlans: false,
+  },
   bulkSend: {
     isActive: false,
     targets: [],

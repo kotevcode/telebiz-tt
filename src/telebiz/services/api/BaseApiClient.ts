@@ -4,6 +4,7 @@ import { API_URL, DEBUG } from '../../../config';
 import { TelebizStorageKey } from '../../config/storageKeys';
 import { logDebugMessage } from '../../../util/debugConsole';
 import storage from '../../util/storage';
+import { PaymentRequiredError } from '../errors';
 
 // Default configuration
 const DEFAULT_CONFIG: TelebizApiConfig = {
@@ -210,6 +211,11 @@ export abstract class BaseApiClient {
 
         if (this.config.debug) {
           logDebugMessage('error', 'API Error:', error);
+        }
+
+        // Handle 402 Payment Required - subscription/trial issues
+        if (response.status === 402) {
+          throw new PaymentRequiredError(errorData.data);
         }
 
         throw new Error(error.message);

@@ -228,9 +228,13 @@ export class ClaudeApiClient {
             }
           }
 
+          if (content.length === 0) {
+            return undefined;
+          }
+
           return {
             role: 'assistant' as const,
-            content: content.length > 0 ? content : [{ type: 'text', text: '' }],
+            content,
           };
         }
 
@@ -238,7 +242,7 @@ export class ClaudeApiClient {
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
         };
-      });
+      }).filter(Boolean);
 
     // Extract system message if present
     const systemMessage = messages.find((msg) => msg.role === 'system');

@@ -1,10 +1,10 @@
 import type { ChangeEvent } from 'react';
 import type { FC } from '../../../../lib/teact/teact';
-import { memo, useCallback, useMemo } from '../../../../lib/teact/teact';
+import { memo, useCallback, useEffect, useMemo, useState } from '../../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../../global';
 
 import type {
-  CreateOrganizationData, Organization, OrganizationMember, Role, TelebizUser,
+  CreateOrganizationData, Organization, OrganizationMember, Role, Subscription, TelebizUser,
 } from '../../../services/types';
 import { TelebizSettingsScreens } from '../types';
 
@@ -13,16 +13,20 @@ import { getMainUsername } from '../../../../global/helpers/users';
 import { selectUser } from '../../../../global/selectors';
 import {
   selectTelebizAuthIsLoading,
+  selectTelebizCurrentOrgSubscription,
   selectTelebizOrganizationsIsLoading,
   selectTelebizPendingOrganization,
   selectTelebizRoles,
   selectTelebizUser,
 } from '../../../global/selectors';
 
+import useFlag from '../../../../hooks/useFlag';
 import useLastCallback from '../../../../hooks/useLastCallback';
+import { useTelebizLang } from '../../../hooks/useTelebizLang';
 
 import Loading from '../../../../components/ui/Loading';
 import { telebizApiClient } from '../../../services/api/TelebizApiClient';
+import ConfirmMemberChangesModal from './ConfirmMemberChangesModal';
 import TelebizOrganizationsAddMembers from './AddMembers';
 import TelebizOrganizationsForm from './Form';
 import TelebizOrganizationsPayment from './Payment';
@@ -37,6 +41,7 @@ type StateProps = {
   pendingOrganization?: Partial<Organization>;
   user?: TelebizUser;
   roles: Role[];
+  subscription?: Subscription;
 };
 
 const TelebizOrganizationsManage: FC<OwnProps & StateProps> = ({
@@ -46,6 +51,7 @@ const TelebizOrganizationsManage: FC<OwnProps & StateProps> = ({
   pendingOrganization,
   user,
   roles,
+  subscription,
 }) => {
   const {
     openTelebizSettingsScreen,
@@ -53,7 +59,23 @@ const TelebizOrganizationsManage: FC<OwnProps & StateProps> = ({
     createTelebizOrganization,
     updateTelebizOrganizationData,
     setPendingTelebizOrganization,
+    showNotification,
   } = getActions();
+
+  const lang = useTelebizLang();
+
+  const isCreating = !pendingOrganization?.id;
+
+  // Track original member count for confirmation modal
+  const [originalMemberCount, setOriginalMemberCount] = useState<number | undefined>(undefined);
+  const [isConfirmModalOpen, openConfirmModal, closeConfirmModal] = useFlag();
+
+  // Set original member count when entering edit mode (only once when data is first available)
+  useEffect(() => {
+    if (!isCreating && pendingOrganization?.members && originalMemberCount === undefined) {
+      setOriginalMemberCount(pendingOrganization.members.length);
+    }
+  }, [isCreating, pendingOrganization?.members, originalMemberCount]);
 
   const orgRoles = useMemo(() => roles.filter((role) => role.scope === 'organization'), [roles]);
   const defaultRoleName = useMemo(
@@ -173,13 +195,52 @@ const TelebizOrganizationsManage: FC<OwnProps & StateProps> = ({
       createTelebizOrganization({ data: pendingOrganization as CreateOrganizationData });
     }
 
-    openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Organizations });
+    openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Main });
   }, [
     pendingOrganization,
     openTelebizSettingsScreen,
     createTelebizOrganization,
     updateTelebizOrganizationData,
   ]);
+
+  const handleDirectSave = useLastCallback(() => {
+    if (!pendingOrganization?.name || !pendingOrganization?.members?.length || !pendingOrganization?.id) {
+      return;
+    }
+
+    updateTelebizOrganizationData({
+      organizationId: pendingOrganization.id,
+      data: pendingOrganization as CreateOrganizationData,
+    });
+
+    openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Main });
+  });
+
+  const handleSaveWithConfirmation = useLastCallback(() => {
+    const newCount = pendingOrganization?.members?.length || 0;
+    const maxSeats = subscription?.max_seats ?? -1;
+
+    // Check if new member count exceeds plan limit (-1 means unlimited)
+    if (maxSeats !== -1 && newCount > maxSeats) {
+      showNotification({
+        message: lang('Organization.MaxSeatsExceeded', { max: maxSeats }),
+      });
+      return;
+    }
+
+    // Show confirmation when member count changed
+    // originalMemberCount being undefined means data wasn't loaded yet, skip confirmation
+    if (originalMemberCount !== undefined && originalMemberCount !== newCount) {
+      openConfirmModal();
+    } else {
+      handleDirectSave();
+    }
+  });
+
+  const handleConfirmSave = useLastCallback(() => {
+    closeConfirmModal();
+    handleDirectSave();
+  });
 
   if (isLoading || isLoadingOrganizations) {
     return <Loading />;
@@ -189,20 +250,31 @@ const TelebizOrganizationsManage: FC<OwnProps & StateProps> = ({
     case TelebizSettingsScreens.OrganizationsCreate:
     case TelebizSettingsScreens.OrganizationsEdit:
       return (
-        <TelebizOrganizationsForm
-          id={pendingOrganization?.id || 0}
-          isLoading={isLoading || isLoadingOrganizations}
-          logoUrl={pendingOrganization?.logo_url || ''}
-          handleLogoUrlChange={handleLogoUrlChange}
-          name={pendingOrganization?.name || ''}
-          handleNameChange={handleNameChange}
-          description={pendingOrganization?.description || ''}
-          handleDescriptionChange={handleDescriptionChange}
-          members={pendingOrganization?.members || []}
-          handleAddMembersClick={handleAddMembersClick}
-          isSaveButtonShown={isSaveButtonShown}
-          handleOrganizationPay={handleOrganizationPay}
-        />
+        <>
+          <TelebizOrganizationsForm
+            id={pendingOrganization?.id || 0}
+            isCreating={isCreating}
+            isLoading={isLoading || isLoadingOrganizations}
+            logoUrl={pendingOrganization?.logo_url || ''}
+            handleLogoUrlChange={handleLogoUrlChange}
+            name={pendingOrganization?.name || ''}
+            handleNameChange={handleNameChange}
+            description={pendingOrganization?.description || ''}
+            handleDescriptionChange={handleDescriptionChange}
+            members={pendingOrganization?.members || []}
+            handleAddMembersClick={handleAddMembersClick}
+            isSaveButtonShown={isSaveButtonShown}
+            handleSubmit={isCreating ? handleOrganizationPay : handleSaveWithConfirmation}
+          />
+          <ConfirmMemberChangesModal
+            isOpen={isConfirmModalOpen}
+            currentSeats={originalMemberCount || 0}
+            newSeats={pendingOrganization?.members?.length || 0}
+            isTrial={subscription?.status === 'trial'}
+            onConfirm={handleConfirmSave}
+            onClose={closeConfirmModal}
+          />
+        </>
       );
     case TelebizSettingsScreens.OrganizationsAddMembers:
       return (
@@ -211,8 +283,12 @@ const TelebizOrganizationsManage: FC<OwnProps & StateProps> = ({
           selectedMemberIds={selectedMemberIds}
           lockedMemberIds={lockedMemberIds}
           onSelectedMemberIdsChange={changeSelectedMemberIdsHandler}
-          onNextStep={() => openTelebizSettingsScreen({ screen: TelebizSettingsScreens.OrganizationsCreate })}
-          onReset={() => openTelebizSettingsScreen({ screen: TelebizSettingsScreens.OrganizationsCreate })}
+          onNextStep={() => openTelebizSettingsScreen({
+            screen: isCreating ? TelebizSettingsScreens.OrganizationsCreate : TelebizSettingsScreens.OrganizationsEdit,
+          })}
+          onReset={() => openTelebizSettingsScreen({
+            screen: isCreating ? TelebizSettingsScreens.OrganizationsCreate : TelebizSettingsScreens.OrganizationsEdit,
+          })}
         />
       );
     case TelebizSettingsScreens.OrganizationsPayment:
@@ -238,5 +314,6 @@ export default memo(withGlobal<OwnProps>(
     pendingOrganization: selectTelebizPendingOrganization(global),
     user: selectTelebizUser(global),
     roles: selectTelebizRoles(global),
+    subscription: selectTelebizCurrentOrgSubscription(global),
   }),
 )(TelebizOrganizationsManage));

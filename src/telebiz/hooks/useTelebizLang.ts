@@ -10,9 +10,10 @@ import useEffectOnce from '../../hooks/useEffectOnce';
 import useForceUpdate from '../../hooks/useForceUpdate';
 
 // Language-specific translation packs
-const LANGUAGE_PACKS: Record<string, Record<TelebizLangKey, string>> = {
-  en: telebizEnglishTranslations,
-  es: telebizSpanishTranslations,
+// Using Partial to allow incomplete translation packs that fallback to English
+const LANGUAGE_PACKS: Record<string, Partial<Record<TelebizLangKey, string>>> = {
+  en: telebizEnglishTranslations as Partial<Record<TelebizLangKey, string>>,
+  es: telebizSpanishTranslations as Partial<Record<TelebizLangKey, string>>,
   // Add more languages here as needed
 };
 
@@ -24,24 +25,24 @@ export function useTelebizLang() {
     return addLocalizationCallback(forceUpdate);
   });
 
+  const mainLang = getTranslationFn();
+  const currentLangCode = mainLang.code || 'en';
+  const shortLangCode = currentLangCode.split('-')[0]; // e.g., 'en-US' -> 'en'
+
   const lang = useMemo(() => {
-    const mainLang = getTranslationFn();
-
-    // Get current language code from Telegram's system
-    const currentLangCode = mainLang.code || 'en';
-    const shortLangCode = currentLangCode.split('-')[0]; // e.g., 'en-US' -> 'en'
-
-    // Get the appropriate language pack
+    // Get the appropriate language pack with English fallback
     const langPack = LANGUAGE_PACKS[shortLangCode] || telebizEnglishTranslations;
+    const fallbackLangPack = telebizEnglishTranslations;
 
     return (key: TelebizLangKey, params?: Record<string, string>): string => {
-      if (!langPack[key]) return key;
+      const translation = langPack[key] || fallbackLangPack[key as keyof typeof fallbackLangPack];
+      if (!translation) return key;
       if (params) {
-        return langPack[key].replace(/{(\w+)}/g, (match, p1) => params[p1] || match);
+        return translation.replace(/{(\w+)}/g, (match, p1) => params[p1] || match);
       }
-      return langPack[key];
+      return translation;
     };
-  }, []); // Empty dependency array since we're using forceUpdate
+  }, [shortLangCode]);
 
   return lang;
 }

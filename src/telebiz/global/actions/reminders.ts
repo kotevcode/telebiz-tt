@@ -2,6 +2,7 @@ import { addActionHandler, getGlobal, setGlobal } from '../../../global';
 
 import type { UpdateReminderData } from '../../services/types';
 
+import { checkSubscriptionGate } from './subscriptionGate';
 import { telebizApiClient } from '../../services';
 import {
   addTelebizReminder,
@@ -48,6 +49,8 @@ addActionHandler('loadTelebizReminders', async (global, actions, payload): Promi
 });
 
 addActionHandler('createTelebizReminder', async (global, actions, payload): Promise<void> => {
+  if (!checkSubscriptionGate()) return;
+
   const data = payload;
   const currentOrganization = selectCurrentTelebizOrganization(global);
 
@@ -74,6 +77,8 @@ addActionHandler('createTelebizReminder', async (global, actions, payload): Prom
 });
 
 addActionHandler('updateTelebizReminder', async (global, actions, payload): Promise<void> => {
+  if (!checkSubscriptionGate()) return;
+
   const { reminderId, data } = payload as { reminderId: number; data: UpdateReminderData };
 
   try {
@@ -92,6 +97,8 @@ addActionHandler('updateTelebizReminder', async (global, actions, payload): Prom
 });
 
 addActionHandler('completeTelebizReminder', async (global, actions, payload): Promise<void> => {
+  if (!checkSubscriptionGate()) return;
+
   const { reminderId } = payload;
 
   try {
@@ -110,6 +117,8 @@ addActionHandler('completeTelebizReminder', async (global, actions, payload): Pr
 });
 
 addActionHandler('deleteTelebizReminder', async (global, actions, payload): Promise<void> => {
+  if (!checkSubscriptionGate()) return;
+
   const { reminderId } = payload;
 
   try {
