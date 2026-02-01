@@ -50,7 +50,9 @@ const RelationshipLinkView = ({ chatId, parentEntity, parentEntityType, integrat
       {(chatId || isParentEntity) && (
         <div className={styles.divider} />
       )}
-      {children}
+      <div className={styles.formContent}>
+        {children}
+      </div>
       <div className={styles.divider} />
 
       <div className={styles.selectedEntityFooter}>

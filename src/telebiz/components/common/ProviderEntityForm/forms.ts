@@ -78,18 +78,93 @@ function getDefaultValue(propertyType: StandardPropertyType): string | string[] 
   }
 }
 
+/**
+ * Sorts form fields with title/name first, then select/multiselect, then others.
+ * Maintains parent-child relationships for dependent fields.
+ */
+function sortFieldsByPriority(fields: FormField[]): FormField[] {
+  const titleFieldNames = ['title', 'name', 'subject'];
+
+  const isTitleField = (field: FormField) => {
+    return titleFieldNames.includes(field.name) || titleFieldNames.includes(field.name.toLowerCase());
+  };
+
+  const typePriority: Record<FormField['type'], number> = {
+    select: 2,
+    multiselect: 3,
+    text: 4,
+    number: 5,
+    date: 6,
+    textarea: 7,
+  };
+
+  // Separate title, independent, and dependent fields
+  const titleFields = fields.filter((f) => !f.dependsOn && isTitleField(f));
+  const independent = fields.filter((f) => !f.dependsOn && !isTitleField(f));
+  const dependent = fields.filter((f) => f.dependsOn);
+
+  // Sort independent fields by type priority
+  const sorted = [
+    ...titleFields, // Title/name always first
+    ...independent.sort((a, b) => {
+      const priorityA = typePriority[a.type] ?? 99;
+      const priorityB = typePriority[b.type] ?? 99;
+      return priorityA - priorityB;
+    }),
+  ];
+
+  // Insert dependent fields immediately after their parent
+  dependent.forEach((depField) => {
+    const parentIndex = sorted.findIndex((f) => f.name === depField.dependsOn);
+    if (parentIndex !== -1) {
+      sorted.splice(parentIndex + 1, 0, depField);
+    } else {
+      sorted.push(depField); // Fallback if parent not found
+    }
+  });
+
+  return sorted;
+}
+
 export function buildFormFieldsFromProperties(
   fieldNames: string[],
   properties: Property[],
   provider: string,
 ): FormField[] {
-  return fieldNames
+  const fields = fieldNames
     .map((name) => {
       const property = properties.find((p) => p.standardName === name);
       if (!property) return undefined;
 
       const propertyType = getPropertyType(property, provider) as StandardPropertyType;
-      const formType = mapPropertyTypeToFormType(propertyType);
+      let formType = mapPropertyTypeToFormType(propertyType);
+
+      // CRITICAL: Override form type based on property.type and options
+      // This handles cases where the provider API type doesn't match the UI component we need
+      if (property.type === 'multiselect' || propertyType === StandardPropertyType.MULTISELECT) {
+        // Explicitly multiselect type (e.g., label_ids, person_id in Pipedrive)
+        formType = 'multiselect';
+      } else if (property.options) {
+        // Has options (array or record for dependent fields) → render as select
+        // Examples:
+        // - Array: pipeline with options [{label: "Sales", value: "1"}]
+        // - Record: stage with options {"1": [{label: "Todo", value: "1"}], "2": [...]}
+        if (Array.isArray(property.options) && property.options.length > 0) {
+          formType = 'select';
+        } else if (typeof property.options === 'object' && Object.keys(property.options).length > 0) {
+          formType = 'select';
+        }
+      }
+
+      // Get default value
+      let defaultValue = getDefaultValue(propertyType);
+
+      // Auto-select first option for select fields, empty array for multiselect
+      if (formType === 'select' && Array.isArray(property.options) && property.options.length > 0) {
+        defaultValue = property.options[0].value;
+      } else if (formType === 'multiselect') {
+        defaultValue = [];
+      }
 
       return {
         name,
@@ -97,10 +172,13 @@ export function buildFormFieldsFromProperties(
         type: formType,
         options: property.options,
         dependsOn: property.dependsOn,
-        value: getDefaultValue(propertyType),
+        value: defaultValue,
       } as FormField;
     })
     .filter((field): field is FormField => field !== undefined);
+
+  // Sort fields by priority (select/multiselect first)
+  return sortFieldsByPriority(fields);
 }
 
 // Static forms for entity types or providers without dynamic properties support

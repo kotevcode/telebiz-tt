@@ -136,6 +136,9 @@ export const telebizSpanishTranslations = {
   'RelationshipModal.Type': 'Tipo',
   'RelationshipModal.Phone': 'Teléfono',
   'RelationshipModal.Email': 'Correo Electrónico',
+  // Telebiz Relationship
+  'TelebizRelationship.ShowMoreFields': 'Mostrar más campos',
+  'TelebizRelationship.ShowFewerFields': 'Mostrar menos campos',
   // Delete Relationship Item Confirmation Modal
   'DeleteRelationshipItemConfirmationModal.Title': '{action} {entity}',
   'DeleteRelationshipItemConfirmationModal.Remove': 'quitar',

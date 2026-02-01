@@ -8,6 +8,7 @@ import { convertNotionPropertiesToFormFields, decodeEntityId } from '../../../ut
 import { ProviderEntityType } from '../../../services';
 import { buildFormFieldsFromProperties, forms, getFieldNamesForProvider, hasDynamicFields } from './forms';
 
+import useLastCallback from '../../../../hooks/useLastCallback';
 import { useProviderProperty } from '../../../hooks/useProviderProperty';
 
 import EntityFormFields from './ProviderEntityFormFields';
@@ -23,8 +24,13 @@ interface OwnProps {
   renderSubmitButton: (
     props: {
       disabled: boolean;
+      onSubmit: () => void;
     }) => React.ReactNode;
   properties: PropertiesByEntityType[];
+  mode?: 'create' | 'edit';
+  initialValues?: Record<string, any>;
+  fieldFilter?: 'all' | 'minimal';
+  databaseId?: string;
 }
 
 const EntityForm = ({
@@ -35,6 +41,10 @@ const EntityForm = ({
   renderSubmitButton,
   isLoading,
   properties,
+  mode = 'edit',
+  initialValues = {},
+  fieldFilter = 'all',
+  databaseId,
 }: OwnProps) => {
   const firstInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | undefined>(undefined);
   const props = useMemo(
@@ -48,10 +58,11 @@ const EntityForm = ({
   const formFields = useMemo(() => {
     // Notion pages have special handling
     if (entityType === ProviderEntityType.Page) {
-      const [, databaseId] = decodeEntityId((entity as ProviderPage).id);
-      const entityProperties = properties.find((e) => e.id === databaseId)?.properties;
+      const pageEntity = entity as ProviderPage | undefined;
+      const dbId = pageEntity ? decodeEntityId(pageEntity.id)[1] : databaseId;
+      const entityProperties = properties.find((e) => e.id === dbId)?.properties;
       if (entityProperties?.length) {
-        return convertNotionPropertiesToFormFields(entityProperties, (entity as ProviderPage).properties);
+        return convertNotionPropertiesToFormFields(entityProperties, pageEntity?.properties || {});
       }
     }
 
@@ -99,8 +110,13 @@ const EntityForm = ({
       }, {} as Record<string, FormField>));
       return;
     }
+    // Create mode: use initialValues if provided
     setForm(formFields.reduce((acc, field) => {
-      acc[field.name] = { ...field, value: field.value };
+      const initialValue = initialValues[field.name];
+      acc[field.name] = {
+        ...field,
+        value: initialValue !== undefined ? initialValue : field.value,
+      };
       return acc;
     }, {} as Record<string, FormField>));
   }, [entityType, entity, formFields]);
@@ -111,7 +127,7 @@ const EntityForm = ({
     }
   }, [initialized, firstInputRef]);
 
-  const handleChange = (key: string, value: string | string[]) => {
+  const handleChange = useLastCallback((key: string, value: string | string[]) => {
     const updatedForm = { ...form, [key]: { ...form[key], value } };
 
     // Reset dependent fields when parent field changes
@@ -137,12 +153,12 @@ const EntityForm = ({
     }
 
     setForm(updatedForm);
-  };
+  });
 
-  const clearForm = () => {
+  const clearForm = useLastCallback(() => {
     setForm({});
     setInitialized(false);
-  };
+  });
 
   const isFormValid = () => {
     return formFields?.some((field) => {
@@ -151,13 +167,13 @@ const EntityForm = ({
     }) || false;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = useLastCallback(async () => {
     if (!isFormValid()) {
       return;
     }
-    onSubmit(form);
+    await onSubmit(form);
     clearForm();
-  };
+  });
 
   return initialized && (
     <form
@@ -171,6 +187,7 @@ const EntityForm = ({
           <EntityFormFields formFields={formFields || []} handleChange={handleChange} form={form} />
           {renderSubmitButton({
             disabled: isLoading || !isFormValid(),
+            onSubmit: handleSubmit,
           })}
         </div>
       </div>

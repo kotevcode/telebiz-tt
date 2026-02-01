@@ -23,6 +23,28 @@ export interface TelebizLangPack {
   'TelebizWelcome.Folder.Description': string;
   'TelebizWelcome.GetStarted': string;
   'TelebizWelcome.ContactUs': string;
+  // Landing Screen
+  'TelebizLanding.Title': string;
+  'TelebizLanding.Description': string;
+  // Landing Features
+  TelebizFeatureAIAgentTitle: string;
+  TelebizFeatureAIAgentDescription: string;
+  TelebizFeatureCRMTitle: string;
+  TelebizFeatureCRMDescription: string;
+  TelebizFeatureBulkMessagingTitle: string;
+  TelebizFeatureBulkMessagingDescription: string;
+  TelebizFeatureRemindersTitle: string;
+  TelebizFeatureRemindersDescription: string;
+  TelebizFeatureTemplatesTitle: string;
+  TelebizFeatureTemplatesDescription: string;
+  TelebizFeatureMultiOrgTitle: string;
+  TelebizFeatureMultiOrgDescription: string;
+  // Landing CTA
+  'TelebizLanding.CTA.Title': string;
+  'TelebizLanding.CTA.Description': string;
+  'TelebizLanding.CTA.StartChat': string;
+  'TelebizLanding.CTA.TryAgent': string;
+  'TelebizLanding.CTA.LearnMore': string;
   // Settings
   'Settings.Menu.Integrations': string;
   'Settings.Menu.Organizations': string;
@@ -134,6 +156,9 @@ export interface TelebizLangPack {
   'RelationshipModal.Type': string;
   'RelationshipModal.Phone': string;
   'RelationshipModal.Email': string;
+  // Telebiz Relationship
+  'TelebizRelationship.ShowMoreFields': string;
+  'TelebizRelationship.ShowFewerFields': string;
   // Telebiz Relationship Panel
   'RelationshipPanel.overview': string;
   'RelationshipPanel.meetings': string;

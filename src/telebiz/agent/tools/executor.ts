@@ -1,6 +1,6 @@
 import { getActions, getGlobal, setGlobal } from '../../../global';
 
-import type { ApiChat, ApiChatFolder, ApiMessage } from '../../../api/types';
+import type { ApiChat, ApiChatFolder, ApiMessage, ApiTopic } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { ExtraToolName, ToolResult } from '../types';
 
@@ -55,6 +55,7 @@ let callsInCurrentRequest = 0;
 // Heavy operations that need more delay (mutating/creating operations only)
 const HEAVY_OPERATIONS = new Set([
   'sendMessage',
+  'editMessage',
   'forwardMessages',
   'deleteMessages',
   'createGroup',
@@ -70,10 +71,14 @@ const HEAVY_OPERATIONS = new Set([
 ]);
 
 /**
- * Reset the per-request call counter (call at start of new agent request)
+ * Reset rate limiting state for a new execution.
+ * This clears both the per-request counter and call history,
+ * ensuring each execution starts fresh without being blocked
+ * by previous executions in the conversation.
  */
 export function resetRequestCallCount(): void {
   callsInCurrentRequest = 0;
+  callHistory.length = 0;
 }
 
 /**
@@ -163,6 +168,7 @@ export async function executeTool(
     'getChatInfo',
     'getCurrentChat',
     'getRecentMessages',
+    'listForumTopics',
     'getChatMembers',
     'getUserInfo',
     'searchUsers',
@@ -215,7 +221,10 @@ export async function executeTool(
           args.text as string,
           args.username as string | undefined,
           args.replyToMessageId as number | undefined,
+          args.threadId as number | undefined,
         );
+      case 'editMessage':
+        return executeEditMessage(args.chatId as string, args.messageId as number, args.newText as string);
       case 'forwardMessages':
         return executeForwardMessages(
           args.fromChatId as string,
@@ -240,7 +249,10 @@ export async function executeTool(
           args.chatId as string,
           args.limit as number | undefined,
           args.offset as number | undefined,
+          args.threadId as number | undefined,
         );
+      case 'listForumTopics':
+        return executeListForumTopics(args.chatId as string, args.limit as number | undefined);
       case 'markChatAsRead':
         return executeMarkChatAsRead(args.chatId as string);
 
@@ -744,6 +756,7 @@ async function executeSendMessage(
   text: string,
   username?: string,
   replyToMessageId?: number,
+  threadId?: number,
 ): Promise<ToolResult> {
   const { sendMessage } = getActions();
   const tabId = getCurrentTabId();
@@ -783,15 +796,34 @@ async function executeSendMessage(
     };
   }
 
+  // Validate threadId for forum chats
+  if (threadId !== undefined && !chat.isForum) {
+    return {
+      success: false,
+      error: `Cannot use threadId for non-forum chat. Chat ${chatId} is not a forum.`,
+    };
+  }
+
   // 4. Now safe to send
   const telegramText = convertToTelegramMarkdown(text);
   const formattedText = parseHtmlAsFormattedText(telegramText, true);
 
+  // Build reply info - only when replying to a message
+  const replyInfo = replyToMessageId ? {
+    type: 'message' as const,
+    replyToMsgId: replyToMessageId,
+    replyToTopId: threadId,
+  } : undefined;
+
   sendMessage({
     text: formattedText.text,
     entities: formattedText.entities,
-    messageList: { chatId: chat.id, threadId: -1, type: 'thread' },
-    replyInfo: replyToMessageId ? { type: 'message', replyToMsgId: replyToMessageId } : undefined,
+    messageList: {
+      chatId: chat.id,
+      threadId: threadId ?? -1,
+      type: 'thread',
+    },
+    replyInfo,
     tabId,
   });
 
@@ -799,8 +831,73 @@ async function executeSendMessage(
 
   return {
     success: true,
-    data: { sent: true, chatId: chat.id, text: preview },
+    data: {
+      sent: true,
+      chatId: chat.id,
+      threadId,
+      text: preview,
+    },
     affectedChatIds: [chat.id],
+  };
+}
+
+async function executeEditMessage(
+  chatId: string,
+  messageId: number,
+  newText: string,
+): Promise<ToolResult> {
+  const global = getGlobal();
+  const chat = selectChat(global, chatId);
+
+  if (!chat) {
+    return { success: false, error: `Chat not found: ${chatId}` };
+  }
+
+  const messagesById = selectChatMessages(global, chatId);
+  const message = messagesById?.[messageId];
+
+  if (!message) {
+    return {
+      success: false,
+      error: `Message ${messageId} not found in chat ${chatId}`,
+    };
+  }
+
+  if (!message.isOutgoing) {
+    return {
+      success: false,
+      error: 'You can only edit messages you sent (outgoing messages).',
+    };
+  }
+
+  const telegramText = convertToTelegramMarkdown(newText);
+  const formattedText = parseHtmlAsFormattedText(telegramText, true);
+
+  const result = await callApi('editMessage', {
+    chat,
+    message,
+    text: formattedText.text,
+    entities: formattedText.entities,
+  });
+
+  if (!result) {
+    return {
+      success: false,
+      error: 'Failed to edit message. It may be too old to edit (>48 hours).',
+    };
+  }
+
+  const preview = formattedText.text.substring(0, 50) + (formattedText.text.length > 50 ? '...' : '');
+
+  return {
+    success: true,
+    data: {
+      edited: true,
+      chatId,
+      messageId,
+      newText: preview,
+    },
+    affectedChatIds: [chatId],
   };
 }
 
@@ -958,7 +1055,24 @@ function formatMessageForAgent(msg: ApiMessage, global: GlobalState) {
   };
 }
 
-async function executeGetRecentMessages(chatId: string, limit = 20, offset = 0): Promise<ToolResult> {
+function formatMessageWithThreadId(
+  msg: ApiMessage,
+  chat: ApiChat,
+  global: GlobalState,
+) {
+  const formatted = formatMessageForAgent(msg, global);
+  if (chat.isForum && msg.replyInfo?.replyToTopId) {
+    return { ...formatted, threadId: msg.replyInfo.replyToTopId };
+  }
+  return formatted;
+}
+
+async function executeGetRecentMessages(
+  chatId: string,
+  limit = 20,
+  offset = 0,
+  threadId?: number,
+): Promise<ToolResult> {
   let global = getGlobal();
   const chat = selectChat(global, chatId);
 
@@ -966,9 +1080,17 @@ async function executeGetRecentMessages(chatId: string, limit = 20, offset = 0):
     return { success: false, error: `Chat not found: ${chatId}` };
   }
 
+  if (threadId !== undefined && !chat.isForum) {
+    return {
+      success: false,
+      error: `Cannot use threadId for non-forum chat. Chat ${chatId} is not a forum.`,
+    };
+  }
+
   const maxMessages = Math.min(limit, 100);
+  const effectiveThreadId = threadId ?? -1;
   const messagesById = selectChatMessages(global, chatId);
-  const listedIds = selectListedIds(global, chatId, -1);
+  const listedIds = selectListedIds(global, chatId, effectiveThreadId);
   const cachedCount = listedIds?.length || 0;
   const canUseCache = cachedCount > 0 && offset + maxMessages <= cachedCount;
 
@@ -986,19 +1108,19 @@ async function executeGetRecentMessages(chatId: string, limit = 20, offset = 0):
       .reverse()
       .map((msgId) => messagesById[msgId])
       .filter(Boolean)
-      .map((msg) => formatMessageForAgent(msg, global));
+      .map((msg) => formatMessageWithThreadId(msg, chat, global));
   } else {
-    // Fetch from API - threadId: -1 is MAIN_THREAD_ID for GetHistory
+    // Fetch from API
     const result = await callApi('fetchMessages', {
       chat,
-      threadId: -1,
+      threadId: effectiveThreadId,
       limit: maxMessages,
       addOffset: offset,
     });
 
     if (result?.messages?.length) {
       global = getGlobal();
-      messages = result.messages.map((msg: ApiMessage) => formatMessageForAgent(msg, global));
+      messages = result.messages.map((msg: ApiMessage) => formatMessageWithThreadId(msg, chat, global));
       hasMore = result.messages.length >= maxMessages;
     }
   }
@@ -1007,10 +1129,61 @@ async function executeGetRecentMessages(chatId: string, limit = 20, offset = 0):
     success: true,
     data: {
       chatTitle: chat.title,
+      threadId,
       messageCount: messages.length,
       offset,
       hasMore,
       messages,
+    },
+    affectedChatIds: [chatId],
+  };
+}
+
+async function executeListForumTopics(
+  chatId: string,
+  limit = 50,
+): Promise<ToolResult> {
+  const global = getGlobal();
+  const chat = selectChat(global, chatId);
+
+  if (!chat) {
+    return { success: false, error: `Chat not found: ${chatId}` };
+  }
+
+  if (!chat.isForum) {
+    return {
+      success: false,
+      error: `Chat ${chatId} is not a forum. Only forum groups have topics.`,
+    };
+  }
+
+  const result = await callApi('fetchTopics', {
+    chat,
+    limit: Math.min(limit, 100),
+  });
+
+  if (!result) {
+    return { success: false, error: 'Failed to fetch topics' };
+  }
+
+  const topics = result.topics.map((topic: ApiTopic) => ({
+    id: topic.id,
+    title: topic.title,
+    iconEmojiId: topic.iconEmojiId,
+    isPinned: topic.isPinned,
+    isClosed: topic.isClosed,
+    isHidden: topic.isHidden,
+    lastMessageId: topic.lastMessageId,
+    unreadCount: topic.unreadCount,
+    date: topic.date,
+  }));
+
+  return {
+    success: true,
+    data: {
+      chatTitle: chat.title,
+      topicCount: topics.length,
+      topics,
     },
     affectedChatIds: [chatId],
   };
@@ -1350,40 +1523,43 @@ async function executeBatchAddToFolder(chatIds: string[], folderId: number): Pro
     return { success: false, error: `Folder not found: ${folderId}` };
   }
 
-  // Rate limit check - count as ONE operation
+  // Get folder title safely
+  const folderTitle = folder.title?.text || folder.title || `Folder ${folderId}`;
+
+  // Rate limit check - count as ONE operation for the batch
   const rateCheck = await enforceRateLimit('batchAddToFolder');
   if (!rateCheck.allowed) {
     return { success: false, error: rateCheck.error };
   }
 
-  // Merge new chat IDs with existing (avoid duplicates)
-  const existingIds = new Set(folder.includedChatIds);
+  // Check which chats are already in folder
+  const existingIds = new Set(folder.includedChatIds || []);
   const newChatIds = chatIds.filter((id) => !existingIds.has(id));
 
   if (newChatIds.length === 0) {
     return {
       success: true,
-      data: { added: 0, total: chatIds.length, toFolder: folder.title.text, alreadyIncluded: chatIds.length },
+      data: { added: 0, total: chatIds.length, toFolder: folderTitle, alreadyIncluded: chatIds.length },
       affectedChatIds: [],
     };
   }
 
-  // Single API call with all chats
-  const result = await callApi('editChatFolder', {
+  // Add all chats at once using editChatFolder action (proper batch operation)
+  const { editChatFolder } = getActions();
+  const updatedIncludedChatIds = [...(folder.includedChatIds || []), ...newChatIds];
+
+  editChatFolder({
     id: folderId,
     folderUpdate: {
-      ...folder,
-      includedChatIds: [...folder.includedChatIds, ...newChatIds],
+      title: folder.title,
+      excludedChatIds: folder.excludedChatIds,
+      includedChatIds: updatedIncludedChatIds,
     },
   });
 
-  if (!result) {
-    return { success: false, error: 'Failed to update folder' };
-  }
-
   return {
     success: true,
-    data: { added: newChatIds.length, total: chatIds.length, toFolder: folder.title.text },
+    data: { added: newChatIds.length, total: chatIds.length, toFolder: folderTitle },
     affectedChatIds: newChatIds,
   };
 }

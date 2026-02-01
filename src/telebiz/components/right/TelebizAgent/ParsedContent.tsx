@@ -6,6 +6,7 @@ import type { ApiMessageEntity } from '../../../../api/types';
 import { ApiMessageEntityTypes } from '../../../../api/types';
 
 import buildClassName from '../../../../util/buildClassName';
+import parseHtmlAsFormattedText from '../../../../util/parseHtmlAsFormattedText';
 import { renderTextWithEntities } from '../../../../components/common/helpers/renderTextWithEntities';
 
 import styles from './ParsedContent.module.scss';
@@ -13,6 +14,11 @@ import styles from './ParsedContent.module.scss';
 interface OwnProps {
   content: string;
   className?: string;
+}
+
+// Detect if content contains HTML tags
+function hasHtmlTags(content: string): boolean {
+  return /<[a-z][\s\S]*>/i.test(content);
 }
 
 interface ParseResult {
@@ -204,6 +210,13 @@ const ParsedContent = ({ content, className }: OwnProps) => {
   const rendered = useMemo(() => {
     if (!content) return undefined;
 
+    // If content contains HTML tags, parse as HTML
+    if (hasHtmlTags(content)) {
+      const { text, entities } = parseHtmlAsFormattedText(content, false, false);
+      return renderTextWithEntities({ text, entities });
+    }
+
+    // Otherwise, parse as markdown
     const lines = content.split('\n');
     const elements: TeactNode[] = [];
 
