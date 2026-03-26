@@ -28357,6 +28357,11 @@ namespace Api {
       channel: Api.TypeInputChannel;
       tab: Api.TypeProfileTab;
     }
+    export class GetFutureCreatorAfterLeave extends Request<{
+      channel: Api.TypeInputChannel;
+    }, Api.TypeUser> {
+      channel: Api.TypeInputChannel;
+    }
   }
 
   export namespace bots {

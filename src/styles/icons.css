@@ -468,7 +468,7 @@ url("./icons.woff?4ca2ae9f8c7763ea420459de680c8340") format("woff");
 .icon-more-circle::before {
   content: "\f195";
 }
-.icon-monospace::before {
+.icon-message-succeeded::before {
   content: "\f196";
 }
 .icon-microphone::before {

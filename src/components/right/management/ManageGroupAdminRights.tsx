@@ -250,6 +250,52 @@ const ManageGroupAdminRights = ({
     chat.isCreator && selectedUser && !isUserBot(selectedUser) && selectedUserId !== currentUserId,
   );
 
+  const handleStartTransfer = useLastCallback(() => {
+    if (!selectedUserId) return;
+
+    verifyTransferOwnership({
+      chatId: chat.id,
+      userId: selectedUserId,
+      onSuccess: openTransferDialog,
+      onPasswordMissing: openTwoFaCheckModal,
+      onPasswordTooFresh: openTwoFaCheckModal,
+      onSessionTooFresh: openTwoFaCheckModal,
+    });
+  });
+
+  const handleConfirmTransfer = useLastCallback(() => {
+    closeTransferDialog();
+    openPasswordModal();
+  });
+
+  const handleTransferOwnership = useLastCallback((password: string) => {
+    if (!selectedUserId) return;
+
+    const user = usersById[selectedUserId];
+    const userName = user ? getUserFullName(user) : '';
+
+    transferChannelOwnership({
+      chatId: chat.id,
+      userId: selectedUserId,
+      password,
+      onSuccess: () => {
+        showNotification({
+          message: lang(
+            isChannel ? 'EditAdminTransferChannelOwnershipSuccess' : 'EditAdminTransferGroupOwnershipSuccess',
+            { user: userName },
+          ),
+        });
+      },
+    });
+
+    closePasswordModal();
+  });
+
+  const selectedUser = selectedUserId ? usersById[selectedUserId] : undefined;
+  const canTransferOwnership = Boolean(
+    chat.isCreator && selectedUser && !isUserBot(selectedUser) && selectedUserId !== currentUserId,
+  );
+
   if (!selectedChatMember) {
     return undefined;
   }
