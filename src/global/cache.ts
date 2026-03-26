@@ -34,6 +34,7 @@ import { GLOBAL_STATE_CACHE_KEY } from '../util/multiaccount';
 import { encryptSession } from '../util/passcode';
 import { onBeforeUnload, throttle } from '../util/schedulers';
 import { hasStoredSession } from '../util/sessions';
+import { selectThreadInfo } from './selectors/threads';
 import { addActionHandler, getGlobal } from './index';
 import { INITIAL_GLOBAL_STATE, INITIAL_PERFORMANCE_STATE_MED } from './initialState';
 import { clearGlobalForLockScreen, clearSharedStateForLockScreen } from './reducers';
@@ -43,6 +44,7 @@ import {
   selectCurrentMessageList,
   selectFullWebPageFromMessage,
   selectTopics,
+  selectTopicsInfo,
   selectViewportIds,
   selectVisibleUsers,
 } from './selectors';
@@ -352,6 +354,10 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
     cachedSharedSettings.performance = INITIAL_PERFORMANCE_STATE_MED;
   }
 
+  if (cachedSharedSettings.performance.messageBlur === undefined) {
+    cachedSharedSettings.performance.messageBlur = false;
+  }
+
   if (!cachedSharedSettings.foldersPosition) {
     cachedSharedSettings.foldersPosition = FOLDERS_POSITION_DEFAULT;
   }
@@ -363,6 +369,12 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   if (untypedCached.sharedState?.settings?.shouldWarnAboutSvg) {
     cached.sharedState.settings.shouldWarnAboutFiles = true;
     untypedCached.sharedState.settings.shouldWarnAboutSvg = undefined;
+  }
+
+  if (cached.cacheVersion < 3) {
+    cached.cacheVersion = 3;
+    cached.messages = initialState.messages;
+    cached.chats.listIds = initialState.chats.listIds;
   }
 
   if (!cached.auth) {
@@ -538,13 +550,6 @@ function reduceTelebiz(telebiz: TelebizState): TelebizState {
     settings: {
       ...telebiz.settings,
       isLoading: false,
-      error: undefined,
-    },
-    subscription: {
-      ...telebiz.subscription,
-      subscriptionsByOrgId: telebiz.subscription?.subscriptionsByOrgId || {},
-      isLoading: false,
-      isLoadingPlans: false,
       error: undefined,
     },
     bulkSend: {
@@ -748,18 +753,20 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
 
     const chatLastMessageId = selectChatLastMessageId(global, chatId);
 
+    const topicsInfo = selectTopicsInfo(global, chatId);
     const openedThreadIds = Array.from(openedChatThreadIds[chatId] || []);
     const commentThreadIds = Object.values(global.messages.byChatId[chatId].threadsById || {})
       .map(({ threadInfo }) => (threadInfo?.isCommentsInfo ? threadInfo?.originMessageId : undefined))
       .filter(Boolean);
-    const threadIds = unique(openedThreadIds.concat(commentThreadIds));
+    const threadIds = unique(openedThreadIds.concat(commentThreadIds, topicsInfo?.listedTopicIds || []));
 
+    const topics = selectTopics(global, chatId);
     const threadsToSave = pickTruthy(current.threadsById, [MAIN_THREAD_ID, ...threadIds]);
 
-    const viewportIdsToSave = unique(Object.values(threadsToSave).flatMap((thread) => thread.lastViewportIds || []));
-    const topics = selectTopics(global, chatId);
+    const viewportIdsToSave = unique(Object.values(threadsToSave)
+      .flatMap((thread) => thread.localState?.lastViewportIds || []));
     const topicLastMessageIds = topics && forumPanelChatIds.includes(chatId)
-      ? Object.values(topics).map(({ lastMessageId }) => lastMessageId) : [];
+      ? Object.values(topics).map(({ id }) => selectThreadInfo(global, chatId, id)?.lastMessageId).filter(Boolean) : [];
     const savedLastMessageIds = chatId === currentUserId && global.chats.lastMessageIds.saved
       ? Object.values(global.chats.lastMessageIds.saved) : [];
     const lastMessageIdsToSave = [chatLastMessageId].concat(topicLastMessageIds).concat(savedLastMessageIds)
@@ -769,9 +776,11 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
       const thread = threadsToSave[Number(key)];
       acc[Number(key)] = {
         ...thread,
-        listedIds: thread.lastViewportIds,
-        pinnedIds: undefined,
-        typingStatus: undefined,
+        localState: {
+          ...thread.localState,
+          listedIds: thread.localState?.lastViewportIds,
+          typingStatus: undefined,
+        },
       };
       return acc;
     }, {} as GlobalState['messages']['byChatId'][string]['threadsById']);
@@ -892,5 +901,5 @@ function reduceGroupCalls<T extends GlobalState>(global: T): GlobalState['groupC
 
 function reduceAvailableReactions(availableReactions?: ApiAvailableReaction[]): ApiAvailableReaction[] | undefined {
   return availableReactions
-    ?.map((r) => pick(r, ['reaction', 'staticIcon', 'title', 'isInactive']));
+    ?.map((r) => ({ ...pick(r, ['reaction', 'staticIcon', 'title', 'isInactive']), isLocalCache: true }));
 }

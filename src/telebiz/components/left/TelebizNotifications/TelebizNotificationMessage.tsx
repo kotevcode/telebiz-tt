@@ -12,7 +12,7 @@ import {
 } from '../../../../global/helpers';
 import { selectChat, selectChatMessage } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
-import { formatPastDatetime } from '../../../../util/dates/dateFormat';
+import { formatPastDatetime } from '../../../../util/dates/oldDateFormat';
 import { getCurrentTabId } from '../../../../util/establishMultitabRole';
 
 import useMessageMediaHash from '../../../../hooks/media/useMessageMediaHash';

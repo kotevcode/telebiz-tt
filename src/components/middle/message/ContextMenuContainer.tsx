@@ -65,15 +65,15 @@ import {
   selectPollFromMessage,
   selectRequestedChatTranslationLanguage,
   selectRequestedMessageTranslationLanguage,
-  selectSavedDialogIdFromMessage,
   selectStickerSet,
-  selectThreadInfo,
   selectTopic,
   selectUser,
+  selectUserFullInfo,
   selectUserStatus,
   selectWebPageFromMessage,
 } from '../../../global/selectors';
 import { selectMessageDownloadableMedia } from '../../../global/selectors/media';
+import { selectSavedDialogIdFromMessage, selectThreadInfo } from '../../../global/selectors/threads';
 import buildClassName from '../../../util/buildClassName';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import { isUserId } from '../../../util/entities/ids';
@@ -163,6 +163,8 @@ type StateProps = {
   userFullName?: string;
   canGift?: boolean;
   savedDialogId?: string;
+  noForwardsMyEnabled?: boolean;
+  noForwardsPeerEnabled?: boolean;
 };
 
 const selection = window.getSelection();
@@ -233,6 +235,8 @@ const ContextMenuContainer: FC<OwnProps & StateProps> = ({
   canGift,
   className,
   savedDialogId,
+  noForwardsMyEnabled,
+  noForwardsPeerEnabled,
   onClose,
   onCloseAnimationEnd,
 }) => {
@@ -278,6 +282,11 @@ const ContextMenuContainer: FC<OwnProps & StateProps> = ({
 
   const oldLang = useOldLang();
   const lang = useLang();
+
+  const noForwardsNotice = noForwardsPeerEnabled
+    ? lang('ContextMenuNoForwardsPeer', { name: userFullName })
+    : (noForwardsMyEnabled ? lang('ContextMenuNoForwardsYou') : undefined);
+
   const { ref: containerRef } = useShowTransition({
     isOpen,
     onCloseAnimationEnd,
@@ -775,6 +784,7 @@ const ContextMenuContainer: FC<OwnProps & StateProps> = ({
         onSelectLanguage={handleSelectLanguage}
         userFullName={userFullName}
         canGift={canGift}
+        noForwardsNotice={noForwardsNotice}
       />
       <PinMessageModal
         isOpen={isPinModalOpen}
@@ -806,6 +816,7 @@ export default memo(withGlobal<OwnProps>(
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, message.chatId) : undefined;
     const user = selectUser(global, message.chatId);
     const userFullName = user && getUserFullName(user);
+    const userFullInfo = isPrivate ? selectUserFullInfo(global, message.chatId) : undefined;
 
     const {
       seenByExpiresAt, seenByMaxChatMembers, maxUniqueReactions, readDateExpiresAt,
@@ -837,7 +848,9 @@ export default memo(withGlobal<OwnProps>(
     const isOwn = isOwnMessage(message);
     const chatBot = chat && selectBot(global, chat.id);
     const isBot = Boolean(chatBot);
-    const isMessageUnread = selectIsMessageUnread(global, message);
+    const isMessageUnread = selectIsMessageUnread(
+      global, message.chatId, threadId || MAIN_THREAD_ID, message.id, messageListType,
+    );
     const canLoadReadDate = Boolean(
       isPrivate
       && isOwn
@@ -969,6 +982,8 @@ export default memo(withGlobal<OwnProps>(
       canGift,
       savedDialogId,
       webPage,
+      noForwardsMyEnabled: userFullInfo?.noForwardsMyEnabled,
+      noForwardsPeerEnabled: userFullInfo?.noForwardsPeerEnabled,
     };
   },
 )(ContextMenuContainer));

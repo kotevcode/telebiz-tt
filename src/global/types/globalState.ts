@@ -335,6 +335,7 @@ export type GlobalState = {
   starGiftCollections?: {
     byPeerId: Record<string, ApiStarGiftCollection[]>;
   };
+  activeGiftAuctionIds?: string[];
   giftAuctionByGiftId?: Record<string, ApiStarGiftAuctionState>;
 
   stickers: {

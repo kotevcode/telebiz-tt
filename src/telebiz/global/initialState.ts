@@ -6,6 +6,12 @@ const DEFAULT_AGENT_CONFIG = {
   maxTokens: 4096,
 };
 
+const DEFAULT_WEB_SEARCH_CONFIG = {
+  enabled: false,
+  mode: 'auto' as const,
+  maxResults: 5,
+};
+
 export const INITIAL_TELEBIZ_STATE: TelebizState = {
   auth: {
     isAuthenticated: false,
@@ -89,6 +95,7 @@ export const INITIAL_TELEBIZ_STATE: TelebizState = {
     },
     isMcpEnabled: false,
     isMcpConnected: false,
+    webSearch: DEFAULT_WEB_SEARCH_CONFIG,
   },
   templatesChats: {
     templatesChats: [],
@@ -103,12 +110,6 @@ export const INITIAL_TELEBIZ_STATE: TelebizState = {
     isLoading: false,
     isSyncing: false,
     lastSyncByChatId: {},
-  },
-  subscription: {
-    subscriptionsByOrgId: {},
-    plans: [],
-    isLoading: false,
-    isLoadingPlans: false,
   },
   bulkSend: {
     isActive: false,

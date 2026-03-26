@@ -49,6 +49,10 @@ const AgentMessage = ({ message }: OwnProps) => {
     return message.toolCalls.some((tc) => SKILL_TOOLS.has(tc.function.name));
   }, [message.toolCalls]);
 
+  const hasWebSearch = Boolean(message.annotations?.searchResults?.length);
+  const webFetchUrls = message.annotations?.webFetchUrls;
+  const searchResults = message.annotations?.searchResults;
+
   // Check if this message only has thinking tools (no visible content or tool calls)
   const hasOnlyThinkingTools = useMemo(() => {
     if (!message.toolCalls?.length) return false;
@@ -56,6 +60,8 @@ const AgentMessage = ({ message }: OwnProps) => {
     const hasVisibleTools = visibleToolCalls.length > 0;
     return !hasContent && !hasVisibleTools && message.toolCalls.length > 0;
   }, [message.toolCalls, message.content, visibleToolCalls.length]);
+
+  const hasChips = visibleToolCalls.length > 0 || usedSkill || hasWebSearch || Boolean(webFetchUrls?.length);
 
   return (
     <div className={buildClassName(styles.message, isUser && styles.userMessage)}>
@@ -68,20 +74,18 @@ const AgentMessage = ({ message }: OwnProps) => {
         </div>
       ) : undefined}
 
-      {/* Message content */}
-      {message.content && (
-        <div className={styles.content}>
-          {isUser ? message.content : <ParsedContent content={message.content} />}
-        </div>
-      )}
-
-      {/* Tool calls as inline chips (excluding thinking tools) */}
-      {(visibleToolCalls.length > 0 || usedSkill) ? (
+      {/* Tool calls as inline chips — before content */}
+      {hasChips && (
         <div className={styles.toolChips}>
+          {hasWebSearch && (
+            <ToolCallChip label={lang('Agent.Message.WebSearchBadge')} />
+          )}
+          {webFetchUrls?.map((url) => (
+            <ToolCallChip key={url} label={new URL(url).hostname} href={url} />
+          ))}
           {visibleToolCalls.map((tc) => (
             <ToolCallChip key={tc.id} toolCall={tc} />
           ))}
-          {/* Skill indicator - shown when a skill was used */}
           {usedSkill ? (
             <div className={styles.skillChip}>
               <i className="icon icon-document" />
@@ -89,7 +93,31 @@ const AgentMessage = ({ message }: OwnProps) => {
             </div>
           ) : undefined}
         </div>
-      ) : undefined}
+      )}
+
+      {/* Search source links — after badges, before content */}
+      {searchResults && searchResults.length > 0 && (
+        <div className={styles.sourceLinks}>
+          {searchResults.map((result, index) => (
+            <a
+              key={index}
+              href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.sourceLink}
+            >
+              {result.title || new URL(result.url).hostname}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* Message content */}
+      {message.content && (
+        <div className={styles.content}>
+          {isUser ? message.content : <ParsedContent content={message.content} />}
+        </div>
+      )}
     </div>
   );
 };

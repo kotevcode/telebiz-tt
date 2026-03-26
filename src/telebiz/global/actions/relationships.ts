@@ -10,7 +10,6 @@ import {
   ProviderEntityType,
 } from '../../services/types';
 
-import { checkSubscriptionGate } from './subscriptionGate';
 import {
   ENTITIES_SYNC_THRESHOLD,
   PIPELINES_SYNC_THRESHOLD,
@@ -229,8 +228,6 @@ addActionHandler('loadTelebizProviderProperties', async (global, actions, payloa
 });
 
 addActionHandler('createTelebizAssociation', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const { data, parentEntity } = payload as {
     data: CreateProviderEntityData;
     parentEntity: ProviderEntityParent;
@@ -294,8 +291,6 @@ addActionHandler('createTelebizAssociation', async (global, actions, payload): P
 });
 
 addActionHandler('updateTelebizEntity', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const { integrationId, entityType, entityId, data, parentEntity } = payload as {
     integrationId: number;
     entityType: ProviderEntityType;
@@ -363,8 +358,6 @@ addActionHandler('updateTelebizEntity', async (global, actions, payload): Promis
 });
 
 addActionHandler('deleteTelebizEntity', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const { integrationId, entityType, entityId, deleteFromProvider = true, parentEntity } = payload as {
     integrationId: number;
     entityType: ProviderEntityType;
@@ -429,8 +422,6 @@ addActionHandler('deleteTelebizEntity', async (global, actions, payload): Promis
 });
 
 addActionHandler('unlinkTelebizEntity', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const { relationship } = payload as { relationship: ProviderRelationship };
 
   global = getGlobal();
@@ -469,8 +460,6 @@ addActionHandler('unlinkTelebizEntity', async (global, actions, payload): Promis
 });
 
 addActionHandler('removeEntityAssociation', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const {
     integrationId,
     entityType,
@@ -608,8 +597,6 @@ addActionHandler('loadTelebizEntity', async (global, actions, payload): Promise<
 });
 
 addActionHandler('confirmTelebizRemoveEntityFromChat', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const { deleteFromProvider } = payload;
   const tabId = getCurrentTabId();
 
@@ -675,8 +662,6 @@ addActionHandler('confirmTelebizRemoveEntityFromChat', async (global, actions, p
 });
 
 addActionHandler('linkTelebizEntity', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const {
     integrationId, telegramId, telegramHandle, organizationId, entityType, entityId,
   } = payload;

@@ -137,6 +137,7 @@ type OwnProps = {
   onReactionPickerOpen?: (position: IAnchorPosition) => void;
   userFullName?: string;
   canGift?: boolean;
+  noForwardsNotice?: string;
 };
 
 const SCROLLBAR_WIDTH = 10;
@@ -231,6 +232,7 @@ const MessageContextMenu: FC<OwnProps> = ({
   onSelectLanguage,
   userFullName,
   canGift,
+  noForwardsNotice,
 }) => {
   const {
     showNotification, openStickerSet, openCustomEmojiSets, loadStickers, openGiftModal,
@@ -467,8 +469,8 @@ const MessageContextMenu: FC<OwnProps> = ({
             <MenuSeparator size="thick" />
             {!customEmojiSets && (
               <>
-                <Skeleton inline className="menu-loading-row" />
-                <Skeleton inline className="menu-loading-row" />
+                <Skeleton inline className="menu-loading-row" animation="wave" />
+                <Skeleton inline className="menu-loading-row" animation="wave" />
               </>
             )}
             {customEmojiSets && customEmojiSets.length === 1 && (
@@ -520,7 +522,7 @@ const MessageContextMenu: FC<OwnProps> = ({
             </MenuItem>
           </>
         )}
-        {(canLoadReadDate || shouldRenderShowWhen || isEdited) && (
+        {(canLoadReadDate || shouldRenderShowWhen || isEdited || noForwardsNotice) && (
           <MenuSeparator size={hasCustomEmoji ? 'thin' : 'thick'} />
         )}
         {(canLoadReadDate || shouldRenderShowWhen) && (
@@ -535,6 +537,11 @@ const MessageContextMenu: FC<OwnProps> = ({
           <LastEditTimeMenuItem
             message={message}
           />
+        )}
+        {noForwardsNotice && (
+          <MenuItem disabled withWrap className="no-forwards-notice">
+            {noForwardsNotice}
+          </MenuItem>
         )}
       </div>
     </Menu>

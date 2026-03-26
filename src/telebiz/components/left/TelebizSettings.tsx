@@ -1,5 +1,5 @@
 import type { FC } from '../../../lib/teact/teact';
-import { memo, useEffect, useRef, useState } from '../../../lib/teact/teact';
+import { memo, useRef } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import type { AnimationLevel } from '../../../types/index';
@@ -15,7 +15,6 @@ import useScrollNotch from '../../../hooks/useScrollNotch';
 import Transition from '../../../components/ui/Transition';
 import FocusModeChatList from './FocusModeChatList';
 import TelebizActivities from './TelebizActivities';
-import TelebizBilling from './TelebizBilling';
 import TelebizIntegrations from './TelebizIntegrations';
 import AIIntegrations from './TelebizIntegrations/AIIntegrations';
 import ClaudeIntegration from './TelebizIntegrations/ClaudeIntegration';
@@ -39,7 +38,6 @@ const TRANSITION_RENDER_COUNT = Object.keys(TelebizSettingsScreens).length / 2;
 
 const ALLOWED_SCREENS_TO_RETURN_TO_CHAT_LIST = [
   TelebizSettingsScreens.Main,
-  TelebizSettingsScreens.Notifications,
   TelebizSettingsScreens.FocusMode,
 ];
 
@@ -66,14 +64,6 @@ const Settings: FC<OwnProps & StateProps> = ({
   const containerRef = useRef<HTMLDivElement>();
   const isCreating = !pendingOrganization?.id;
 
-  // Track billing screen visits to trigger refresh
-  const [billingKey, setBillingKey] = useState(0);
-  useEffect(() => {
-    if (currentScreen === TelebizSettingsScreens.Billing) {
-      setBillingKey((prev) => prev + 1);
-    }
-  }, [currentScreen]);
-
   useScrollNotch({
     containerRef,
     selector: '.settings-content',
@@ -82,20 +72,20 @@ const Settings: FC<OwnProps & StateProps> = ({
   const handleReset = useLastCallback((forceReturnToChatList?: true | Event) => {
     if (!ALLOWED_SCREENS_TO_RETURN_TO_CHAT_LIST.includes(currentScreen) && forceReturnToChatList !== true) {
       const { openTelebizSettingsScreen } = getActions();
-      if (currentScreen === TelebizSettingsScreens.OrganizationsCreate
-        || currentScreen === TelebizSettingsScreens.OrganizationsEdit
-      ) {
-        openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Main });
+      if (currentScreen === TelebizSettingsScreens.OrganizationsCreate) {
+        openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Organizations });
         return;
       }
-      if (currentScreen === TelebizSettingsScreens.OrganizationsAddMembers) {
+      if (currentScreen === TelebizSettingsScreens.OrganizationsAddMembers
+        || currentScreen === TelebizSettingsScreens.OrganizationsPayment
+      ) {
         openTelebizSettingsScreen({
           screen: isCreating ? TelebizSettingsScreens.OrganizationsCreate : TelebizSettingsScreens.OrganizationsEdit,
         });
         return;
       }
-      if (currentScreen === TelebizSettingsScreens.OrganizationsPayment) {
-        openTelebizSettingsScreen({ screen: TelebizSettingsScreens.OrganizationsCreate });
+      if (currentScreen === TelebizSettingsScreens.OrganizationsEdit) {
+        openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Organizations });
         return;
       }
       if (currentScreen === TelebizSettingsScreens.ManageTemplatesChats) {
@@ -104,10 +94,6 @@ const Settings: FC<OwnProps & StateProps> = ({
       }
       if (currentScreen === TelebizSettingsScreens.IntegrationDetails) {
         openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Integrations });
-        return;
-      }
-      if (currentScreen === TelebizSettingsScreens.Billing) {
-        openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Main });
         return;
       }
       if (currentScreen === TelebizSettingsScreens.AIIntegrations) {
@@ -194,6 +180,7 @@ const Settings: FC<OwnProps & StateProps> = ({
         return (
           <McpIntegration />
         );
+      case TelebizSettingsScreens.Organizations:
       case TelebizSettingsScreens.OrganizationsCreate:
       case TelebizSettingsScreens.OrganizationsEdit:
       case TelebizSettingsScreens.OrganizationsAddMembers:
@@ -216,10 +203,6 @@ const Settings: FC<OwnProps & StateProps> = ({
       case TelebizSettingsScreens.FocusMode:
         return (
           <FocusModeChatList isActive={isActive} onReset={handleReset} />
-        );
-      case TelebizSettingsScreens.Billing:
-        return (
-          <TelebizBilling refreshKey={billingKey} />
         );
       case TelebizSettingsScreens.PendingReminders:
         return (

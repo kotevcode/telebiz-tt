@@ -105,5 +105,12 @@ export { default as OneTimeMediaModal } from '../components/modals/oneTimeMedia/
 export { default as WebAppsCloseConfirmationModal } from '../components/main/WebAppsCloseConfirmationModal';
 export { default as FrozenAccountModal } from '../components/modals/frozenAccount/FrozenAccountModal';
 export { default as ProfileRatingModal } from '../components/modals/profileRating/ProfileRatingModal';
+export { default as DisableSharingAboutModal } from '../components/modals/disableSharing/DisableSharingAboutModal';
+export { default as EditRankModal } from '../components/modals/rank/EditRankModal';
+export { default as RankModal } from '../components/modals/rank/RankModal';
 export { default as QuickPreviewModal } from '../components/modals/quickPreview/QuickPreviewModal';
 export { default as StealthModeModal } from '../components/modals/storyStealthMode/StealthModeModal';
+export { default as LeaveGroupModal } from '../components/modals/leaveGroup/LeaveGroupModal';
+export { default as TwoFaCheckModal } from '../components/modals/twoFaCheck/TwoFaCheckModal';
+export { default as QuickChatPickerModal } from '../components/modals/quickChatPicker/QuickChatPickerModal';
+export { default as CocoonModal } from '../components/modals/cocoon/CocoonModal';

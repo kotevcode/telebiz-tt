@@ -28,21 +28,6 @@ export function selectIsTelebizUserOrganizationOwner(global: GlobalState): boole
   return userMember?.role_name === ORGANIZATION_OWNER_ROLE;
 }
 
-/**
- * Check if user owns ANY organization (not just the current one)
- * This is used to determine if user can start their own subscription
- */
-export function selectIsTelebizUserAnyOrgOwner(global: GlobalState): boolean {
-  const user = selectTelebizUser(global);
-  if (!user) return false;
-
-  const organizations = global.telebiz?.organizations?.organizations || [];
-  return organizations.some((org) => {
-    const userMember = org.members?.find((member) => member.user_id === user.id);
-    return userMember?.role_name === ORGANIZATION_OWNER_ROLE;
-  });
-}
-
 export function selectTelebizAuthIsLoading(global: GlobalState): boolean {
   return selectTelebizAuth(global).isLoading;
 }

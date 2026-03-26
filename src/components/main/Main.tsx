@@ -270,6 +270,7 @@ const Main = ({
     loadGiftAuction,
     loadPromoData,
     telebizInit,
+    loadActiveGiftAuctions,
   } = getActions();
 
   if (DEBUG && !DEBUG_isLogged) {
@@ -352,6 +353,7 @@ const Main = ({
       loadRestrictedEmojiStickers();
       loadQuickReplies();
       loadTimezones();
+      loadActiveGiftAuctions();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
 

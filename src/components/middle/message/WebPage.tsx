@@ -1,14 +1,11 @@
-import type { FC } from '../../../lib/teact/teact';
-import type React from '../../../lib/teact/teact';
 import { memo, useMemo, useRef } from '../../../lib/teact/teact';
-import { getActions, withGlobal } from '../../../global';
+import { getActions } from '../../../global';
 
 import type { ApiMessage, ApiMessageWebPage, ApiTypeStory, ApiWebPage, ApiWebPageFull } from '../../../api/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
 import { AudioOrigin, type ThemeKey, type WebPageMediaSize } from '../../../types';
 
 import { getPhotoFullDimensions } from '../../../global/helpers';
-import { selectCanPlayAnimatedEmojis } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import { tryParseDeepLink } from '../../../util/deepLinkParser';
 import trimText from '../../../util/trimText';
@@ -68,11 +65,8 @@ type OwnProps = {
   onCancelMediaTransfer?: NoneToVoidFunction;
   onContainerClick?: ((e: React.MouseEvent) => void);
 };
-type StateProps = {
-  canPlayAnimatedEmojis: boolean;
-};
 
-const WebPage: FC<OwnProps & StateProps> = ({
+const WebPage = ({
   messageWebPage,
   webPage,
   message,
@@ -96,7 +90,7 @@ const WebPage: FC<OwnProps & StateProps> = ({
   onContainerClick,
   onAudioPlay,
   onCancelMediaTransfer,
-}) => {
+}: OwnProps) => {
   const { openUrl, openTelegramLink } = getActions();
   const stickersRef = useRef<HTMLDivElement>();
 
@@ -125,13 +119,18 @@ const WebPage: FC<OwnProps & StateProps> = ({
     return parsedLink.timestamp;
   }, [webPage?.url]);
 
-  if (webPage?.webpageType !== 'full') return undefined;
+  const handleArticleClick = useLastCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    openUrl({ url: webPage.url!, shouldSkipModal: messageWebPage.isSafe });
+  });
 
   const handleOpenTelegramLink = useLastCallback(() => {
     openTelegramLink({
-      url: webPage.url,
+      url: webPage.url!,
     });
   });
+
+  if (webPage?.webpageType !== 'full') return undefined;
 
   const {
     siteName,
@@ -233,7 +232,7 @@ const WebPage: FC<OwnProps & StateProps> = ({
         {isArticle && (
           <div
             className={buildClassName('WebPage-text', 'WebPage-text_interactive')}
-            onClick={() => openUrl({ url, shouldSkipModal: messageWebPage.isSafe })}
+            onClick={handleArticleClick}
           >
             <SafeLink className="site-name" url={url} text={siteName || displayUrl} />
             {title && (
@@ -244,7 +243,7 @@ const WebPage: FC<OwnProps & StateProps> = ({
             )}
           </div>
         )}
-        {photo && !isGift && !isAuction && !video && !document && (
+        {photo && !isGift && !isAuction && !video && (
           <Photo
             photo={photo}
             isOwn={message?.isOutgoing}
@@ -290,7 +289,7 @@ const WebPage: FC<OwnProps & StateProps> = ({
             onCancelUpload={onCancelMediaTransfer}
           />
         )}
-        {document && (
+        {document && !photo && (
           <Document
             document={document}
             message={message}
@@ -341,10 +340,4 @@ function getIsSmallPhoto(webPage: ApiWebPageFull, mediaSize?: WebPageMediaSize) 
   return width === height && !webPage.hasLargeMedia;
 }
 
-export default memo(withGlobal<OwnProps>(
-  (global): Complete<StateProps> => {
-    return {
-      canPlayAnimatedEmojis: selectCanPlayAnimatedEmojis(global),
-    };
-  },
-)(WebPage));
+export default memo(WebPage);

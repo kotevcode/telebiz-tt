@@ -1,10 +1,9 @@
 import type { ChangeEvent } from 'react';
-import { memo, useState } from '../../../../lib/teact/teact';
+import { memo, useEffect, useRef, useState } from '../../../../lib/teact/teact';
 
 import type { OrganizationMember } from '../../../services/types';
 
 import buildClassName from '../../../../util/buildClassName';
-import { disableDirectTextInput, enableDirectTextInput } from '../../../../util/directInputManager';
 
 import useOldLang from '../../../../hooks/useOldLang';
 import { useTelebizLang } from '../../../hooks/useTelebizLang';
@@ -23,7 +22,6 @@ const ERROR_NO_MEMBERS = 'Please add at least one member to your organization';
 
 const TelebizOrganizationsForm = ({
   id,
-  isCreating,
   isLoading,
   logoUrl,
   handleLogoUrlChange,
@@ -34,10 +32,9 @@ const TelebizOrganizationsForm = ({
   members,
   handleAddMembersClick,
   isSaveButtonShown,
-  handleSubmit,
+  handleOrganizationPay,
 }: {
   id: number;
-  isCreating: boolean;
   isLoading: boolean;
   logoUrl: string;
   handleLogoUrlChange: (file: File) => void;
@@ -48,54 +45,52 @@ const TelebizOrganizationsForm = ({
   members: Partial<OrganizationMember>[];
   handleAddMembersClick: () => void;
   isSaveButtonShown: boolean;
-  handleSubmit: () => void;
+  handleOrganizationPay: () => void;
 }) => {
   const lang = useTelebizLang();
   const tgLang = useOldLang();
   const [error, setError] = useState<string | undefined>();
+  const textAreaRef = useRef<HTMLTextAreaElement>();
+
+  useEffect(() => {
+    console.log('members form', members);
+  }, [members]);
+
+  useEffect(() => {
+    console.log('name form', name);
+  }, [name]);
 
   return (
     <div className="settings-fab-wrapper">
       <div className={buildClassName('custom-scroll', styles.form)}>
         <div className="settings-item">
-          <div
-            className="settings-input"
-            onFocus={() => disableDirectTextInput()}
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                enableDirectTextInput();
-              }
-            }}
-          >
+          <div className="settings-input">
             <AvatarEditable
               currentAvatarBlobUrl={logoUrl}
               onChange={handleLogoUrlChange}
-              title="Edit your workspace logo"
+              title="Edit your organization logo"
               disabled={isLoading}
             />
             <InputText
-              id="org-name-input"
               value={name}
               onChange={handleNameChange}
-              label={lang('Workspace Name (required)')}
+              label={lang('Organization Name (required)')}
               disabled={isLoading}
               error={error === ERROR_ORGANIZATION_NAME_MISSING ? error : undefined}
-              teactExperimentControlled
             />
             <TextArea
-              id="org-description-input"
+              key={id}
               label={lang('Description (optional)')}
               value={description || ''}
               onChange={handleDescriptionChange}
               disabled={isLoading}
-              noReplaceNewlines
               maxLength={200}
               maxLengthIndicator={(200 - (description?.length || 0)).toString()}
             />
           </div>
 
           <p className="settings-item-description" dir={tgLang.isRtl ? 'rtl' : undefined}>
-            {lang('You can provide an optional description for your workspace.')}
+            {lang('You can provide an optional description for your organization.')}
           </p>
         </div>
         <div className="settings-item">
@@ -122,13 +117,33 @@ const TelebizOrganizationsForm = ({
 
         </div>
 
+        {/* <div className="settings-item">
+          <div className={styles.summaryMembers} dir={tgLang.isRtl ? 'rtl' : undefined}>
+            <div className={styles.summaryMembersInner}>
+              <div className={styles.summaryMembersTitle}>
+                {members.length}
+                {' '}
+                {lang('members')}
+              </div>
+              <div className={styles.summaryMembersDetails}>
+                <div className={styles.summaryMembersDetailsPrice}>
+                  $100.00 / seat
+                </div>
+                <div className={styles.summaryMembersDetailsPriceDiscount}>
+                  $0.00
+                </div>
+              </div>
+            </div>
+          </div>
+        </div> */}
+
       </div>
       <FloatingActionButton
         isShown={isSaveButtonShown}
-        onClick={handleSubmit}
+        onClick={handleOrganizationPay}
         disabled={isLoading}
         ariaLabel={tgLang('Save')}
-        iconName={isCreating ? 'arrow-right' : 'check'}
+        iconName="arrow-right"
         isLoading={isLoading}
       />
     </div>

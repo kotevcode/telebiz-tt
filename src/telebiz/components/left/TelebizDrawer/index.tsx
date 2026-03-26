@@ -8,9 +8,7 @@ import { TelebizSettingsScreens } from '../types';
 
 import { selectTabState } from '../../../../global/selectors';
 import {
-  selectCurrentTelebizOrganization,
-  selectIsAnyAIProviderConnected,
-  selectTelebizIsSubscriptionActive,
+  selectIsTelebizAgentConnected,
   selectTelebizNotifications,
   selectTelebizOrganizations,
 } from '../../../global/selectors';
@@ -29,22 +27,16 @@ type StateProps = {
   organizations: TelebizOrganizationsState;
   telebizPanelScreen?: TelebizPanelScreens;
   isTelebizPanelOpen?: boolean;
-  isFocusModeActive: boolean;
   focusModeChatsCount: number;
-  isProviderConnected: boolean;
-  hasOrganization: boolean;
-  isSubscriptionActive: boolean;
+  isOpenRouterConnected: boolean;
 };
 
 const TelebizDrawer = ({
   organizations,
   telebizPanelScreen,
   isTelebizPanelOpen,
-  isFocusModeActive,
   focusModeChatsCount,
-  isProviderConnected,
-  hasOrganization,
-  isSubscriptionActive,
+  isOpenRouterConnected,
 }: StateProps) => {
   const {
     openLeftColumnContent,
@@ -66,21 +58,18 @@ const TelebizDrawer = ({
   return (
     <div className={styles.container}>
       <OrganizationSwitcher />
+
       <Button
         round
-        className={
-          isTelebizPanelOpen && telebizPanelScreen === TelebizPanelScreens.AgentMode ? styles.active : undefined
-        }
         color="translucent"
         size="smaller"
-        onClick={() => handleTelebizClick(TelebizPanelScreens.AgentMode)}
-        ariaLabel="AI Agent"
-      >
-        <AgentMode />
-        {(!hasOrganization || !isProviderConnected || !isSubscriptionActive) && (
-          <div className={buildClassName(styles.hasNotifications, styles.hasNotificationsWarning)} />
-        )}
-      </Button>
+        onClick={() => {
+          openLeftColumnContent({ contentKey: LeftColumnContent.Telebiz });
+          openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Main });
+        }}
+        ariaLabel="Settings"
+        iconName="settings"
+      />
 
       <Button
         round
@@ -97,15 +86,20 @@ const TelebizDrawer = ({
 
       <Button
         round
+        className={
+          isTelebizPanelOpen && telebizPanelScreen === TelebizPanelScreens.AgentMode ? styles.active : undefined
+        }
         color="translucent"
         size="smaller"
-        onClick={() => {
-          openLeftColumnContent({ contentKey: LeftColumnContent.Telebiz });
-          openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Main });
-        }}
-        ariaLabel="Settings"
-        iconName="settings"
-      />
+        onClick={() => handleTelebizClick(TelebizPanelScreens.AgentMode)}
+        ariaLabel="AI Agent"
+      >
+        <AgentMode />
+        {!isOpenRouterConnected && (
+          <div className={buildClassName(styles.hasNotifications, styles.hasNotificationsWarning)} />
+        )}
+      </Button>
+
     </div>
   );
 };
@@ -118,11 +112,7 @@ export default memo(withGlobal((global): StateProps => {
     organizations: selectTelebizOrganizations(global),
     telebizPanelScreen: tabState.telebizPanelScreen,
     isTelebizPanelOpen: tabState.isTelebizPanelOpen,
-    isFocusModeActive: tabState.leftColumn.contentKey === LeftColumnContent.Telebiz
-      && tabState.leftColumn.telebizSettingsScreen === TelebizSettingsScreens.FocusMode,
     focusModeChatsCount: notificationsState.pendingCount,
-    isProviderConnected: selectIsAnyAIProviderConnected(global),
-    hasOrganization: Boolean(selectCurrentTelebizOrganization(global)),
-    isSubscriptionActive: selectTelebizIsSubscriptionActive(global),
+    isOpenRouterConnected: selectIsTelebizAgentConnected(global),
   };
 })(TelebizDrawer));

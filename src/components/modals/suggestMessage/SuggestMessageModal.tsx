@@ -14,9 +14,9 @@ import {
   TON_CURRENCY_CODE,
 } from '../../../config';
 import { selectIsMonoforumAdmin, selectPeer } from '../../../global/selectors';
-import { selectDraft } from '../../../global/selectors/messages';
+import { selectDraft } from '../../../global/selectors/threads';
 import buildClassName from '../../../util/buildClassName';
-import { formatScheduledDateTime, formatShortDuration } from '../../../util/dates/dateFormat';
+import { formatScheduledDateTime, formatShortDuration } from '../../../util/dates/oldDateFormat';
 import { convertTonFromNanos, convertTonToNanos } from '../../../util/formatCurrency';
 import {
   formatStarsAsIcon,
@@ -283,6 +283,7 @@ const SuggestMessageModal = ({
           className={styles.offerButton}
           onClick={handleOffer}
           disabled={isDisabled}
+          inline
         >
           {isInSuggestChangesMode ? lang('ButtonUpdateTerms')
             : currencyAmount ? lang('ButtonOfferAmount', {

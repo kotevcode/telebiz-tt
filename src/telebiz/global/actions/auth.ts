@@ -338,7 +338,6 @@ addActionHandler('telebizLoadInitialData', (): void => {
     loadTelebizRelationships,
     loadTelebizNotificationCounts,
     loadTelebizTemplatesChats,
-    loadTelebizPlans,
     loadTelebizUserRoles,
   } = getActions();
 
@@ -348,7 +347,6 @@ addActionHandler('telebizLoadInitialData', (): void => {
   loadTelebizRelationships();
   loadTelebizNotificationCounts();
   loadTelebizTemplatesChats();
-  loadTelebizPlans();
   loadTelebizUserRoles();
 });
 

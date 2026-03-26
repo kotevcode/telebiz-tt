@@ -94,7 +94,7 @@ const TextArea: FC<OwnProps> = ({
     const textarea = textareaRef.current;
     if (!textarea) return;
     resizeHeight(textarea);
-  }, [value, resizeHeight]);
+  }, []);
 
   const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;

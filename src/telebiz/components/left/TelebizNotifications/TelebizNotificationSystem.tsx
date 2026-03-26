@@ -4,7 +4,7 @@ import { getActions } from '../../../../global';
 import { type Notification, NotificationStatus } from '../../../services/types';
 
 import buildClassName from '../../../../util/buildClassName';
-import { formatPastDatetime } from '../../../../util/dates/dateFormat';
+import { formatPastDatetime } from '../../../../util/dates/oldDateFormat';
 
 import useContextMenuHandlers from '../../../../hooks/useContextMenuHandlers';
 import useLang from '../../../../hooks/useLang';

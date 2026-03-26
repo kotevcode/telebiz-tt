@@ -13,10 +13,12 @@ export const listChats: ToolDefinition = {
       'Get a list of chats with optional filters. Returns chat IDs, titles, types, and last message info.',
       '',
       'IMPORTANT filter combinations:',
+      '- "find chat by name": use titleContains with the name/keyword (case-insensitive)',
       '- "inactive chats" or "chats I haven\'t heard from": use iAmLastSender=true',
       '- "chats waiting for my response": use iAmLastSender=false',
       '- "old/dormant chats": use lastMessageOlderThanDays with a number like 7, 30',
       '- Combine: iAmLastSender=true + lastMessageOlderThanDays=7 = waiting for reply over a week',
+      '- Combine filters freely: titleContains + chatType, hasUnread + chatType, etc.',
     ].join('\n'),
     parameters: {
       type: 'object',
@@ -24,7 +26,7 @@ export const listChats: ToolDefinition = {
         chatType: {
           type: 'string',
           enum: ['private', 'group', 'supergroup', 'channel', 'all'],
-          description: 'Filter by chat type. Default: all',
+          description: 'Filter by chat type. "group" includes supergroups. Only set if user explicitly asks for a type. Default: all',
         },
         hasUnread: {
           type: 'boolean',
@@ -69,7 +71,8 @@ export const getChatInfo: ToolDefinition = {
     name: 'getChatInfo',
     description: [
       'Get detailed information about a specific chat including members count, description, and settings.',
-      'For private chats (users), also returns common groups you share with that person.',
+      'For private chats (users), also returns common groups with admin/owner status from cache.',
+      'isAdmin is true/false when known, or absent when that group has not been loaded yet.',
     ].join(' '),
     parameters: {
       type: 'object',

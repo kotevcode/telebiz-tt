@@ -10,7 +10,7 @@ import {
   selectTelebizAgentCurrentConversationId,
 } from '../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
-import { formatPastTimeShort } from '../../../../util/dates/dateFormat';
+import { formatPastTimeShort } from '../../../../util/dates/oldDateFormat';
 
 import useLastCallback from '../../../../hooks/useLastCallback';
 import useOldLang from '../../../../hooks/useOldLang';

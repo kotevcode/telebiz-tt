@@ -1,6 +1,5 @@
 import { addActionHandler, getGlobal, setGlobal } from '../../../global';
 
-import { checkSubscriptionGate } from './subscriptionGate';
 import { telebizApiClient } from '../../services';
 import { addTelebizTemplatesChat,
   removeTelebizTemplatesChat,
@@ -36,7 +35,6 @@ addActionHandler('loadTelebizTemplatesChats', async (global, actions, payload): 
 
 addActionHandler('addTelebizTemplatesChat', async (global, actions, payload): Promise<void> => {
   if (!selectIsTelebizAuthenticated(global)) return;
-  if (!checkSubscriptionGate()) return;
 
   const { chatId } = payload;
   try {
@@ -74,7 +72,6 @@ addActionHandler('removeTelebizTemplatesChat', async (global, actions, payload):
 
 addActionHandler('updateTelebizTemplatesChatsList', async (global, actions, payload): Promise<void> => {
   if (!selectIsTelebizAuthenticated(global)) return;
-  if (!checkSubscriptionGate()) return;
 
   const { chatIds } = payload;
   try {

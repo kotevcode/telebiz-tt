@@ -3,7 +3,10 @@ import { getActions, getGlobal } from '../../../../global';
 import type { Notification } from '../../../services/types';
 import type { ExtraTool, ToolDefinition, ToolResult } from '../../types';
 
+import { MAIN_THREAD_ID } from '../../../../api/types';
+
 import { selectChat } from '../../../../global/selectors';
+import { selectThreadReadState } from '../../../../global/selectors/threads';
 import {
   selectTelebizOrderedPendingChatIds,
   selectTelebizPendingNotificationsByChatId,
@@ -307,7 +310,7 @@ function executeGetWorkflowContext(chatId: string): ToolResult {
         id: chat.id,
         title: chat.title,
         type: chat.type,
-        unreadCount: chat.unreadCount,
+        unreadCount: selectThreadReadState(global, chat.id, MAIN_THREAD_ID)?.unreadCount,
       },
       tasks: notifications.map((n) => summarizeNotification(n)),
       relationship: relationship ? {

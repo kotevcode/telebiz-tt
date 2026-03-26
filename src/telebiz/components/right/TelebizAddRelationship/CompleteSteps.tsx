@@ -18,18 +18,8 @@ import Icon from '../../../../components/common/icons/Icon';
 
 import styles from './TelebizAddRelationship.module.scss';
 
-type StepConfig = {
-  number: number;
-  checked: boolean;
-  disabled: boolean;
-  title: string;
-  screen: TelebizSettingsScreens;
-  screenName: string;
-};
-
 type OwnProps = {
   selectedIntegrationId?: number;
-  steps?: StepConfig[];
 };
 
 type StateProps = {
@@ -41,7 +31,6 @@ const CompleteSteps: FC<OwnProps & StateProps> = ({
   selectedIntegrationId,
   currentOrganization,
   integrations,
-  steps: customSteps,
 }) => {
   const lang = useTelebizLang();
   const selectedIntegration = integrations.find((it) => it.id === selectedIntegrationId);
@@ -92,7 +81,7 @@ const CompleteSteps: FC<OwnProps & StateProps> = ({
               openTelebizSettings(TelebizSettingsScreens.Main);
             }}
           >
-            {lang('CompleteSteps.TelebizSettings')}
+            {lang('Telebiz Settings')}
           </span>
           {' '}
           →
@@ -110,42 +99,28 @@ const CompleteSteps: FC<OwnProps & StateProps> = ({
     );
   });
 
-  const resolvedSteps = customSteps || [
-    {
-      number: 1,
-      disabled: false,
-      checked: Boolean(currentOrganization),
-      title: lang('CompleteSteps.JoinWorkspace'),
-      screen: TelebizSettingsScreens.Main,
-      screenName: lang('CompleteSteps.Workspaces'),
-    },
-    {
-      number: 2,
-      disabled: !currentOrganization,
-      checked: Boolean(selectedIntegration),
-      title: lang('CompleteSteps.ConnectProvider'),
-      screen: TelebizSettingsScreens.Integrations,
-      screenName: lang('CompleteSteps.Integrations'),
-    },
-  ];
-
   return (
     <div className={styles.completeStepsWarning}>
       <div className={styles.completeStepsWarningMessage}>
-        {lang('CompleteSteps.Description')}
+        {lang('To be able to use Telebiz, you need to complete the following steps:')}
       </div>
       <div className={styles.completeStepsWarningSteps}>
-        {resolvedSteps.map((step) => (
-          <Step
-            key={step.number}
-            number={step.number}
-            disabled={step.disabled}
-            checked={step.checked}
-            title={step.title}
-            screen={step.screen}
-            screenName={step.screenName}
-          />
-        ))}
+        <Step
+          number={1}
+          disabled={false}
+          checked={Boolean(currentOrganization)}
+          title={lang('Join an organization')}
+          screen={TelebizSettingsScreens.Organizations}
+          screenName={lang('Organizations')}
+        />
+        <Step
+          number={2}
+          disabled={!currentOrganization}
+          checked={Boolean(selectedIntegration)}
+          title={lang('Connect a provider')}
+          screen={TelebizSettingsScreens.Integrations}
+          screenName={lang('Integrations')}
+        />
       </div>
     </div>
   );

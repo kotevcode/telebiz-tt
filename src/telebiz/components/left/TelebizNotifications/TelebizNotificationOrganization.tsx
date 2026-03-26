@@ -5,7 +5,7 @@ import { type Notification, NotificationStatus } from '../../../services/types';
 import { TelebizSettingsScreens } from '../types';
 
 import buildClassName from '../../../../util/buildClassName';
-import { formatPastDatetime } from '../../../../util/dates/dateFormat';
+import { formatPastDatetime } from '../../../../util/dates/oldDateFormat';
 
 import useContextMenuHandlers from '../../../../hooks/useContextMenuHandlers';
 import useLang from '../../../../hooks/useLang';
@@ -54,7 +54,7 @@ const TelebizNotificationOrganization = ({
     onClick?.(notification.id.toString());
 
     openTelebizSettingsScreen({
-      screen: TelebizSettingsScreens.Main,
+      screen: TelebizSettingsScreens.Organizations,
     });
   }, [notification, markTelebizNotificationRead, onClick, openTelebizSettingsScreen]);
 

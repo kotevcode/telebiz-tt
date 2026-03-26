@@ -104,6 +104,11 @@ import type { RegularLangFnParameters } from '../../util/localization';
 import type { ProfileCollectionKey } from '../selectors/payments';
 import type { CallbackAction } from './actions';
 
+export type PollVote = {
+  peerId: string;
+  date: number;
+};
+
 export type TabState = {
   id: number;
   isBlurred?: boolean;
@@ -421,7 +426,7 @@ export type TabState = {
   pollResults: {
     chatId?: string;
     messageId?: number;
-    voters?: Record<string, string[]>; // TODO Rename to `voterIds`
+    votesByOption?: Record<string, PollVote[]>;
     offsets?: Record<string, string>;
   };
 
@@ -684,6 +689,8 @@ export type TabState = {
 
   isGiftRecipientPickerOpen?: boolean;
 
+  isQuickChatPickerOpen?: boolean;
+
   isFrozenAccountModalOpen?: boolean;
 
   starsGiftingPickerModal?: {
@@ -713,6 +720,10 @@ export type TabState = {
   chatRefundModal?: {
     userId: string;
     starsToRefund: number;
+  };
+
+  disableSharingAboutModal?: {
+    userId: string;
   };
 
   limitReachedModal?: {
@@ -842,6 +853,7 @@ export type TabState = {
     peerId?: string;
     recipientId?: string;
     gift: ApiSavedStarGift | ApiStarGift;
+    craftSlotIndex?: number;
   };
 
   giftInfoValueModal?: {
@@ -892,6 +904,44 @@ export type TabState = {
     maxPrice?: number;
   };
 
+  giftCraftModal?: {
+    regularGiftId?: string;
+    regularGiftTitle?: string;
+    gift1?: ApiSavedStarGift;
+    gift2?: ApiSavedStarGift;
+    gift3?: ApiSavedStarGift;
+    gift4?: ApiSavedStarGift;
+    previewAttributes?: ApiStarGiftAttribute[];
+    myCraftableGifts?: ApiSavedStarGift[];
+    myCraftableGiftsNextOffset?: string;
+    shouldRefreshMyCraftableGifts?: boolean;
+    marketCraftableGifts?: ApiStarGiftUnique[];
+    marketCraftableGiftsNextOffset?: string;
+    marketCraftableGiftsCount?: number;
+    isMarketLoading?: boolean;
+    marketFilter: ResaleGiftsFilterOptions;
+    marketAttributes?: ApiStarGiftAttribute[];
+    marketCounters?: ApiStarGiftAttributeCounter[];
+    marketAttributesHash?: string;
+    marketUpdateIteration: number;
+    craftResult?: {
+      success: true;
+      gift: ApiStarGiftUnique;
+    } | {
+      success: false;
+      isError?: true;
+    };
+  };
+
+  giftCraftSelectModal?: {
+    slotIndex: number;
+    isLoading?: boolean;
+  };
+
+  giftCraftInfoModal?: {
+    gift: ApiStarGiftUnique;
+  };
+
   giftWithdrawModal?: {
     gift: ApiSavedStarGift;
     isLoading?: boolean;
@@ -900,6 +950,12 @@ export type TabState = {
 
   giftStatusInfoModal?: {
     emojiStatus: ApiEmojiStatusCollectible;
+  };
+
+  giftPreviewModal?: {
+    attributes: ApiStarGiftAttribute[];
+    originGift: ApiStarGift;
+    shouldShowCraftableOnStart?: boolean;
   };
 
   giftAuctionModal?: {
@@ -938,6 +994,8 @@ export type TabState = {
     acquiredGifts?: ApiStarGiftAuctionAcquiredGift[];
   };
 
+  activeGiftAuctionsModal?: true;
+
   starGiftPriceDecreaseInfoModal?: {
     prices: ApiStarGiftUpgradePrice[];
     currentPrice: number;
@@ -970,9 +1028,35 @@ export type TabState = {
 
   isPasskeyModalOpen?: boolean;
 
+  leaveGroupModal?: {
+    chatId: string;
+    nextOwnerId?: string;
+  };
+
+  isTwoFaCheckModalOpen?: true;
+
   isWaitingForStarGiftUpgrade?: true;
   isWaitingForStarGiftTransfer?: true;
   insertingPeerIdMention?: string;
 
   shouldSaveAttachmentsCompression?: boolean;
+
+  isCocoonModalOpen?: boolean;
+
+  rankModal?: {
+    chatId: string;
+    userId: string;
+    isAdmin?: boolean;
+    isOwner?: boolean;
+    rank?: string;
+  };
+  editRankModal?: {
+    chatId: string;
+    userId: string;
+    isAdmin?: boolean;
+    isOwner?: boolean;
+    rank?: string;
+  };
+  shouldOpenMessageMediaEditor?: boolean;
+
 } & TelebizTabStateFields;

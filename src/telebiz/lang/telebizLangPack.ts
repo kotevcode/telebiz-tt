@@ -48,130 +48,14 @@ export interface TelebizLangPack {
   // Settings
   'Settings.Menu.Integrations': string;
   'Settings.Menu.Organizations': string;
-  'Settings.Menu.OrganizationSettings': string;
   'Settings.Menu.Activities': string;
   'Settings.Menu.AskAQuestion': string;
   'Settings.Menu.Faq': string;
   'Settings.Menu.PrivacyPolicy': string;
   'Settings.Menu.TemplatesChats': string;
-  'Settings.Menu.Billing': string;
-  'Settings.ActiveOrganization': string;
-  'Settings.CreateOrganization': string;
-  'Settings.PendingInvitations': string;
-  'Settings.AcceptInvitation': string;
-  'Settings.NoOrganizations': string;
-  'Settings.NoOrganizationsDescription': string;
-  'Settings.PrivacyHint': string;
-  // Organization Member Changes Confirmation
-  'Organization.ConfirmMemberChanges.Title': string;
-  'Organization.ConfirmMemberChanges.Description': string;
-  'Organization.ConfirmMemberChanges.CurrentSeats': string;
-  'Organization.ConfirmMemberChanges.NewSeats': string;
-  'Organization.ConfirmMemberChanges.Paid': string;
-  'Organization.ConfirmMemberChanges.MonthlyChange': string;
-  'Organization.ConfirmMemberChanges.BillingNote': string;
-  'Organization.ConfirmMemberChanges.TrialNote': string;
-  'Organization.ConfirmMemberChanges.BillingNoteTrialNote': string;
-  'Organization.ConfirmMemberChanges.Confirm': string;
-  'Organization.MaxSeatsExceeded': string;
-  // Trial Banner
-  'TrialBanner.DaysRemaining': string;
-  'TrialBanner.Upgrade': string;
-  // Trial Pane (Chat List)
-  'TrialPane.Title': string;
-  'TrialPane.TitleUrgent': string;
-  'TrialPane.DaysRemaining': string;
-  'TrialPane.Upgrade': string;
-  'TrialPane.SubscribeToKeepUsing': string;
-  'TrialPane.Expired': string;
-  'TrialPane.ContactOwner': string;
-  // Subscription Blocked Modal
-  'SubscriptionBlocked.Title': string;
-  'SubscriptionBlocked.Description': string;
-  'SubscriptionBlocked.ChoosePlan': string;
-  'SubscriptionBlocked.Later': string;
-  // Billing
-  'Billing.CurrentPlan': string;
-  'Billing.Seats': string;
-  'Billing.DaysRemaining': string;
-  'Billing.CancellingAtPeriodEnd': string;
-  'Billing.AvailablePlans': string;
-  'Billing.UpgradeToPlan': string;
-  'Billing.ManageSubscription': string;
-  'Billing.Status.trial': string;
-  'Billing.Status.active': string;
-  'Billing.Status.past_due': string;
-  'Billing.Status.cancelled': string;
-  'Billing.Status.expired': string;
-  'Billing.Plan.Free': string;
-  'Billing.Plan.Popular': string;
-  'Billing.Plan.TBA': string;
-  'Billing.Plan.Current': string;
-  'Billing.Plan.PerSeatMonth': string;
-  'Billing.Plan.ContactSales': string;
-  // Per-user subscription seat breakdown
-  'Billing.TotalSeats': string;
-  'Billing.PaidSeats': string;
-  'Billing.FreeSeats': string;
-  'Billing.BilledSeats': string;
-  'Billing.MaxSeats': string;
-  'Billing.Unlimited': string;
-  'Billing.FreeSeatsHint': string;
-  'Billing.NonOwnerNotice': string;
-  // Billing cycle
-  'Billing.Monthly': string;
-  'Billing.Annual': string;
-  'Billing.SavePercent': string;
-  // Volume/Tiered Pricing
-  'Billing.VolumeDiscount': string;
-  'Billing.VolumeInfo': string;
-  'Billing.Subscribe': string;
-  'Billing.LaunchOffer': string;
-  'Billing.MoreFeatures': string;
-  'Billing.IncludedFeatures': string;
-  'Billing.SelectPlan': string;
-  // Seat sync
-  'Billing.SeatsMismatch': string;
-  'Billing.SyncSeats': string;
-  // Organization Creation
-  'Organization.TrialInfo.Title': string;
-  'Organization.TrialInfo.Description': string;
-  'Organization.ConfirmSeats.Title': string;
-  'Organization.ConfirmSeats.Description': string;
-  'Organization.ConfirmSeats.Confirm': string;
-  // Payment Screen
-  'Payment.Plan.Free': string;
-  'Payment.Plan.TBA': string;
-  'Payment.Month': string;
-  'Payment.ContactSales': string;
-  'Payment.PerSeat': string;
-  'Payment.Members': string;
-  'Payment.PricingSummary': string;
-  'Payment.MonthlyTotal': string;
-  'Payment.BillingStartsAfterTrial': string;
-  'Payment.BillingCycle': string;
-  'Payment.Plan': string;
-  'Payment.PricePerSeat': string;
-  'Payment.AfterTrial': string;
-  'Payment.DueToday': string;
-  'Payment.TrialTitle': string;
-  'Payment.TrialDescription': string;
-  'Payment.NoCreditCardRequired': string;
-  'Payment.AddPaymentLater': string;
-  'Payment.PaymentMethod': string;
-  'Payment.PaymentMethodDescription': string;
-  'Payment.TermsAndConditions': string;
-  'Payment.IAcceptThe': string;
-  'Payment.TermsOfService': string;
-  'Payment.Of': string;
-  'Payment.PleaseAcceptTerms': string;
-  // Checkout Modal
-  'Checkout.Title': string;
-  'Checkout.UpgradeTo': string;
-  'Checkout.PreparingCheckout': string;
-  Close: string;
   'Settings.Menu.AI': string;
   'Settings.Menu.PendingReminders': string;
+  'Settings.Menu.Notifications': string;
   // Templates Chats
   'TemplatesChats.Description': string;
   'TemplatesChats.AddChats': string;
@@ -343,14 +227,6 @@ export interface TelebizLangPack {
   'RelationshipPanelHeader.AgentMode': string;
   'RelationshipPanelHeader.AgentHistory': string;
   'Agent.Title': string;
-  'CompleteSteps.Description': string;
-  'CompleteSteps.JoinWorkspace': string;
-  'CompleteSteps.Workspaces': string;
-  'CompleteSteps.ConnectProvider': string;
-  'CompleteSteps.ConnectAIProvider': string;
-  'CompleteSteps.Integrations': string;
-  'CompleteSteps.AIIntegrations': string;
-  'CompleteSteps.TelebizSettings': string;
   'Agent.SetupRequired': string;
   'Agent.SetupDescription': string;
   'Agent.ConnectOpenRouter': string;
@@ -392,6 +268,8 @@ export interface TelebizLangPack {
   'Agent.History.Undo': string;
   'Agent.History.Delete': string;
   'Agent.History.Messages': string;
+  // Agent Message
+  'Agent.Message.WebSearchBadge': string;
   // Custom Skills
   'Agent.Skills.Title': string;
   'Agent.Skills.Description': string;
@@ -466,10 +344,6 @@ export interface TelebizLangPack {
   'EntityLoadError.TeamMember': string;
   'EntityLoadError.ListItemTitle': string;
   'EntityLoadError.ListItemDescription': string;
-  // Subscription Banner
-  'SubscriptionBanner.Message': string;
-  'SubscriptionBanner.ContactOwner': string;
-  'SubscriptionBanner.Action': string;
   // Features Modal
   'TelebizFeatures.GotIt': string;
   'TelebizFeatures.LearnMore': string;

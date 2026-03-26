@@ -6,7 +6,7 @@ import type {
   VideoRotation,
   VideoState,
 } from '../../lib/secret-sauce';
-import type { ThreadId } from '../../types';
+import type { ThreadId, ThreadReadState } from '../../types';
 import type { RegularLangFnParameters } from '../../util/localization';
 import type { ApiBotCommand, ApiBotMenuButton } from './bots';
 import type {
@@ -122,6 +122,7 @@ export type ApiUpdateChat = {
   '@type': 'updateChat';
   id: string;
   chat: Partial<ApiChat>;
+  readState?: Partial<ThreadReadState>;
   noTopChatsRequest?: boolean;
 };
 
@@ -139,14 +140,6 @@ export type ApiUpdateChatJoin = {
 export type ApiUpdateChatLeave = {
   '@type': 'updateChatLeave';
   id: string;
-};
-
-export type ApiUpdateChatInbox = {
-  '@type': 'updateChatInbox';
-  id: string;
-  threadId?: ThreadId;
-  lastReadInboxMessageId: number;
-  unreadCount: number;
 };
 
 export type ApiUpdateChatTypingStatus = {
@@ -184,6 +177,13 @@ export type ApiUpdateChatMembers = {
   replacedMembers?: ApiChatMember[];
   addedMember?: ApiChatMember;
   deletedMemberId?: string;
+};
+
+export type ApiUpdateChatParticipantRank = {
+  '@type': 'updateChatParticipantRank';
+  id: string;
+  userId: string;
+  rank: string;
 };
 
 export type ApiUpdatePinnedChatIds = {
@@ -245,7 +245,7 @@ export type ApiUpdateNewMessage = {
   '@type': 'newMessage';
   chatId: string;
   id: number;
-  message: Partial<ApiMessage>;
+  message: ApiMessage;
   shouldForceReply?: boolean;
   wasDrafted?: boolean;
   poll?: ApiPoll;
@@ -256,22 +256,36 @@ export type ApiUpdateMessage = {
   '@type': 'updateMessage';
   chatId: string;
   id: number;
-  message: Partial<ApiMessage>;
   poll?: ApiPoll;
   webPage?: ApiWebPage;
   shouldForceReply?: boolean;
   isFromNew?: true;
-};
+} & (
+  {
+    isFull: true;
+    message: ApiMessage;
+  } | {
+    isFull?: false;
+    message: Partial<ApiMessage>;
+  }
+);
 
 export type ApiUpdateScheduledMessage = {
   '@type': 'updateScheduledMessage';
   chatId: string;
   id: number;
-  message: Partial<ApiMessage>;
   poll?: ApiPoll;
   webPage?: ApiWebPage;
   isFromNew?: true;
-};
+} & (
+  {
+    isFull: true;
+    message: ApiMessage;
+  } | {
+    isFull?: false;
+    message: Partial<ApiMessage>;
+  }
+);
 
 export type ApiUpdateQuickReplyMessage = {
   '@type': 'updateQuickReplyMessage';
@@ -306,7 +320,14 @@ export type ApiUpdatePinnedMessageIds = {
 
 export type ApiUpdateThreadInfo = {
   '@type': 'updateThreadInfo';
-  threadInfo: Partial<ApiThreadInfo>;
+  threadInfo: ApiThreadInfo;
+};
+
+export type ApiUpdateThreadReadState = {
+  '@type': 'updateThreadReadState';
+  chatId: string;
+  threadId: ThreadId;
+  readState: Partial<ThreadReadState>;
 };
 
 export type ApiUpdateScheduledMessageSendSucceeded = {
@@ -424,6 +445,7 @@ export type ApiUpdateMessageReactions = {
   '@type': 'updateMessageReactions';
   id: number;
   chatId: string;
+  threadId?: ThreadId;
   reactions: ApiReactions;
 };
 
@@ -738,6 +760,12 @@ export type ApiUpdateTopics = {
   chatId: string;
 };
 
+export type ApiUpdateDiscussion = {
+  '@type': 'updateDiscussion';
+  chatId: string;
+  threadId: number;
+};
+
 export type ApiUpdateViewForumAsMessages = {
   '@type': 'updateViewForumAsMessages';
   chatId: string;
@@ -846,6 +874,10 @@ export type ApiUpdateStarGiftAuctionUserState = {
   userState: ApiStarGiftAuctionUserState;
 };
 
+export type ApiUpdateStarGiftCraftFail = {
+  '@type': 'updateStarGiftCraftFail';
+};
+
 export type ApiUpdateDeleteProfilePhoto = {
   '@type': 'updateDeleteProfilePhoto';
   peerId: string;
@@ -898,8 +930,9 @@ export type ApiUpdateWebPage = {
 export type ApiUpdate = (
   ApiUpdateReady | ApiUpdateSession | ApiUpdateWebAuthTokenFailed | ApiUpdateRequestUserUpdate |
   ApiUpdateAuthorizationState | ApiUpdateAuthorizationError | ApiUpdateConnectionState | ApiUpdateCurrentUser |
-  ApiUpdateChat | ApiUpdateChatInbox | ApiUpdateChatTypingStatus | ApiUpdateChatFullInfo | ApiUpdatePinnedChatIds |
-  ApiUpdateChatMembers | ApiUpdateChatJoin | ApiUpdateChatLeave | ApiUpdateChatPinned | ApiUpdatePinnedMessageIds |
+  ApiUpdateChat | ApiUpdateChatTypingStatus | ApiUpdateChatFullInfo | ApiUpdatePinnedChatIds |
+  ApiUpdateChatMembers | ApiUpdateChatParticipantRank | ApiUpdateChatJoin | ApiUpdateChatLeave
+  | ApiUpdateChatPinned | ApiUpdatePinnedMessageIds |
   ApiUpdateChatListType | ApiUpdateChatFolder | ApiUpdateChatFoldersOrder | ApiUpdateRecommendedChatFolders |
   ApiUpdateNewMessage | ApiUpdateMessage | ApiUpdateThreadInfo | ApiUpdateCommonBoxMessages | ApiUpdatePasskeyOption |
   ApiUpdateDeleteMessages | ApiUpdateMessagePoll | ApiUpdateMessagePollVote | ApiUpdateDeleteHistory |
@@ -907,12 +940,12 @@ export type ApiUpdate = (
   ApiUpdateServiceNotification | ApiDeleteContact | ApiUpdateUser | ApiUpdateUserStatus |
   ApiUpdateUserFullInfo | ApiUpdateVideoProcessingPending | ApiUpdatePeerSettings | ApiUpdateUserAlreadyAuthorized |
   ApiUpdateAvatar | ApiUpdateMessageImage | ApiUpdateDraftMessage | ApiUpdateScheduledMessageSendFailed |
-  ApiUpdateError | ApiUpdateResetContacts | ApiUpdateStartEmojiInteraction |
+  ApiUpdateError | ApiUpdateResetContacts | ApiUpdateStartEmojiInteraction | ApiUpdateThreadReadState |
   ApiUpdateFavoriteStickers | ApiUpdateStickerSet | ApiUpdateStickerSets | ApiUpdateStickerSetsOrder |
   ApiUpdateRecentStickers | ApiUpdateSavedGifs | ApiUpdateNewScheduledMessage | ApiUpdateMoveStickerSetToTop |
   ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage | ApiUpdateStarPaymentStateCompleted |
   ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateMessageTranslations |
-  ApiUpdateFailedMessageTranslations | ApiUpdateWebPage | ApiUpdateChatTypingDraft |
+  ApiUpdateFailedMessageTranslations | ApiUpdateWebPage | ApiUpdateChatTypingDraft | ApiUpdateDiscussion |
   ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode | ApiUpdateWebViewResultSent |
   ApiUpdateDefaultNotifySettings | ApiUpdatePeerNotifySettings | ApiUpdatePeerBlocked | ApiUpdatePrivacy |
   ApiUpdateServerTimeOffset | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
@@ -928,7 +961,8 @@ export type ApiUpdate = (
   ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
   ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateStarGiftAuctionState
-  | ApiUpdateStarGiftAuctionUserState | ApiUpdateBotCommands | ApiUpdateQuickReplyMessage | ApiUpdateQuickReplies
+  | ApiUpdateStarGiftAuctionUserState | ApiUpdateStarGiftCraftFail | ApiUpdateBotCommands
+  | ApiUpdateQuickReplyMessage | ApiUpdateQuickReplies
   | ApiDeleteQuickReply | ApiUpdateDeleteQuickReplyMessages | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdatePaidReactionPrivacy | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError

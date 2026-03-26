@@ -9,6 +9,7 @@ import type {
   AIProvider,
   ConfirmationRequest,
   ExecutionStep,
+  MessageAnnotation,
   ReasoningDetail,
   Skill,
   ThinkingState,
@@ -317,6 +318,19 @@ async function runIteration(
         }
       }
 
+      if (delta.type === 'annotations' && delta.annotations) {
+        // Merge annotations (search results + web fetch URLs can arrive separately)
+        const prev = assistantMessage.annotations || {};
+        const mergedFetchUrls = [...(prev.webFetchUrls || []), ...(delta.annotations.webFetchUrls || [])];
+        assistantMessage.annotations = {
+          searchResults: delta.annotations.searchResults || prev.searchResults,
+          webFetchUrls: mergedFetchUrls.length > 0 ? mergedFetchUrls : undefined,
+        };
+        callbacks.onMessageUpdate(assistantMessageId, {
+          annotations: assistantMessage.annotations,
+        });
+      }
+
       if (delta.type === 'error') {
         callbacks.onError(delta.error || 'Unknown streaming error');
       }
@@ -340,6 +354,7 @@ async function runIteration(
     reasoning: fullReasoning || undefined,
     reasoningDetails: allReasoningDetails.length > 0 ? allReasoningDetails : undefined,
     thoughtDuration: thoughtDuration && thoughtDuration > 0 ? thoughtDuration : undefined,
+    annotations: assistantMessage.annotations,
   });
 
   // Build the complete assistant message for conversation history
@@ -351,6 +366,7 @@ async function runIteration(
     reasoning: fullReasoning || undefined,
     reasoningDetails: allReasoningDetails.length > 0 ? allReasoningDetails : undefined,
     timestamp: Date.now(),
+    annotations: assistantMessage.annotations,
   };
 
   // Check for destructive tools
@@ -551,6 +567,8 @@ export async function runAgentLoop(
   });
 
   let iteration = 0;
+  // Web search only on the first iteration — subsequent iterations are tool-result followups
+  let iterationConfig = config;
 
   while (iteration < MAX_ITERATIONS) {
     iteration++;
@@ -558,13 +576,18 @@ export async function runAgentLoop(
     const result = await runIteration(
       conversationMessages,
       tools,
-      config,
+      iterationConfig,
       accessToken,
       callbacks,
       allThinkingSteps,
       abortSignal,
       provider,
     );
+
+    // Disable web search after first iteration to prevent unnecessary searches on tool-result turns
+    if (iteration === 1 && iterationConfig.webSearch?.enabled) {
+      iterationConfig = { ...iterationConfig, webSearch: undefined, plugins: undefined };
+    }
 
     // If needs confirmation, pause and return
     if (result.needsConfirmation) {

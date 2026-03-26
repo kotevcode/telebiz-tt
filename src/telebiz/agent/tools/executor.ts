@@ -1,6 +1,7 @@
 import { getActions, getGlobal, setGlobal } from '../../../global';
 
 import type { ApiChat, ApiChatFolder, ApiMessage, ApiTopic } from '../../../api/types';
+import { MAIN_THREAD_ID } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { ExtraToolName, ToolResult } from '../types';
 
@@ -23,6 +24,7 @@ import {
   selectListedIds,
   selectPeer,
 } from '../../../global/selectors';
+import { selectThreadReadState } from '../../../global/selectors/threads';
 import { selectUser, selectUserCommonChats } from '../../../global/selectors/users';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getOrderedIds } from '../../../util/folderManager';
@@ -392,7 +394,7 @@ function executeListChats(filter: ListChatsFilter = {}): ToolResult {
       type: getChatTypeString(chat),
       membersCount: chat.membersCount,
       lastMessageDate: lastMessage?.date,
-      unreadCount: chat.unreadCount,
+      unreadCount: selectThreadReadState(global, chat.id, MAIN_THREAD_ID)?.unreadCount,
       isArchived: isChatArchived(chat),
       isPinned,
     });
@@ -436,12 +438,15 @@ function matchesChatFilter(
   // Type filter (renamed from 'type' to 'chatType' to avoid JSON schema confusion)
   if (filter.chatType && filter.chatType !== 'all') {
     const chatType = getChatTypeString(chat);
-    if (chatType !== filter.chatType) return false;
+    // "group" should match both basic groups and supergroups (most groups are supergroups)
+    if (filter.chatType === 'group') {
+      if (chatType !== 'group' && chatType !== 'supergroup') return false;
+    } else if (chatType !== filter.chatType) return false;
   }
 
   // Unread filter
   if (filter.hasUnread !== undefined) {
-    const hasUnread = (chat.unreadCount || 0) > 0;
+    const hasUnread = (selectThreadReadState(global, chat.id, MAIN_THREAD_ID)?.unreadCount || 0) > 0;
     if (hasUnread !== filter.hasUnread) return false;
   }
 
@@ -452,7 +457,8 @@ function matchesChatFilter(
 
   // Title contains
   if (filter.titleContains) {
-    if (!chat.title.toLowerCase().includes(filter.titleContains.toLowerCase())) return false;
+    const title = chat.title || '';
+    if (!title.toLowerCase().includes(filter.titleContains.toLowerCase())) return false;
   }
 
   // Last message date filters - require last message for these filters
@@ -511,18 +517,23 @@ function executeGetChatInfo(chatId: string): ToolResult {
   const chatType = getChatTypeString(chat);
 
   // For private chats, include common groups with this user
-  let commonGroups: { id: string; title: string }[] | undefined;
+  let commonGroups: { id: string; title: string; role?: 'owner' | 'admin' }[] | undefined;
   if (chatType === 'private') {
     const userId = chatId; // For private chats, chatId equals userId
     const commonChats = selectUserCommonChats(global, userId);
 
     if (commonChats?.ids && commonChats.ids.length > 0) {
-      commonGroups = commonChats.ids
-        .map((commonChatId) => {
-          const commonChat = selectChat(global, commonChatId);
-          return commonChat ? { id: commonChat.id, title: commonChat.title } : undefined;
-        })
-        .filter((g): g is { id: string; title: string } => Boolean(g));
+      commonGroups = [];
+      for (const commonChatId of commonChats.ids) {
+        const commonChat = selectChat(global, commonChatId);
+        if (!commonChat) continue;
+        const adminMember = selectChatFullInfo(global, commonChatId)?.adminMembersById?.[userId];
+        commonGroups.push({
+          id: commonChat.id,
+          title: commonChat.title,
+          role: adminMember?.isOwner ? 'owner' : adminMember ? 'admin' : undefined,
+        });
+      }
     } else {
       // Trigger loading common chats if not cached
       const { loadCommonChats } = getActions();
@@ -539,7 +550,7 @@ function executeGetChatInfo(chatId: string): ToolResult {
       membersCount: chat.membersCount || fullInfo?.members?.length,
       description: fullInfo?.about,
       lastMessageDate: lastMessage?.date,
-      unreadCount: chat.unreadCount,
+      unreadCount: selectThreadReadState(global, chatId, MAIN_THREAD_ID)?.unreadCount,
       isArchived: isChatArchived(chat),
       isPinned: selectIsChatPinned(global, chatId),
       isVerified: chat.isVerified,
@@ -577,7 +588,7 @@ function executeGetCurrentChat(): ToolResult {
       membersCount: chat.membersCount || fullInfo?.members?.length,
       description: fullInfo?.about,
       lastMessageDate: lastMessage?.date,
-      unreadCount: chat.unreadCount,
+      unreadCount: selectThreadReadState(global, chat.id, MAIN_THREAD_ID)?.unreadCount,
       isArchived: isChatArchived(chat),
       isPinned: selectIsChatPinned(global, chat.id),
       isVerified: chat.isVerified,
@@ -1314,7 +1325,7 @@ function executeRemoveChatFromFolder(chatId: string, folderIds: number[]): ToolR
 }
 
 function executeDeleteFolder(folderId: number): ToolResult {
-  const { deleteChatFolder } = getActions();
+  const { deleteChatFolder } = getActions(); // TODO: Add tabId
 
   deleteChatFolder({ id: folderId });
 
@@ -1374,11 +1385,41 @@ function executeAddChatMembers(chatId: string, userIds: string[]): ToolResult {
   };
 }
 
-function executeRemoveChatMember(chatId: string, userId: string): ToolResult {
-  const { deleteChatMember } = getActions();
-  const tabId = getCurrentTabId();
+async function executeRemoveChatMember(chatId: string, userId: string): Promise<ToolResult> {
+  const global = getGlobal();
+  const chat = selectChat(global, chatId);
+  const user = selectUser(global, userId);
 
-  deleteChatMember({ chatId, userId, tabId });
+  if (!chat) {
+    return { success: false, error: `Chat not found: ${chatId}` };
+  }
+  if (!user) {
+    return { success: false, error: `User not found: ${userId}` };
+  }
+
+  // Check if current user has admin rights
+  if (!chat.isCreator && !chat.adminRights) {
+    return {
+      success: false,
+      error: 'You need admin rights to remove members from this chat.',
+    };
+  }
+
+  if (isChatSuperGroup(chat) || isChatChannel(chat)) {
+    const result = await callApi('updateChatMemberBannedRights', {
+      chat,
+      user,
+      bannedRights: { viewMessages: true, sendMessages: true },
+    });
+    if (!result) {
+      return { success: false, error: 'Failed to remove member. You may lack the required permissions.' };
+    }
+  } else {
+    const result = await callApi('deleteChatMember', chat, user);
+    if (!result) {
+      return { success: false, error: 'Failed to remove member. You may lack the required permissions.' };
+    }
+  }
 
   return {
     success: true,

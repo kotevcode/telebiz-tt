@@ -21,7 +21,7 @@ import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_APP, IS_MAC_OS } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import captureEscKeyListener from '../../../util/captureEscKeyListener';
-import { formatDateToString } from '../../../util/dates/dateFormat';
+import { formatDateToString } from '../../../util/dates/oldDateFormat';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useConnectionStatus from '../../../hooks/useConnectionStatus';
@@ -30,7 +30,6 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useOldLang from '../../../hooks/useOldLang';
 
-import TelebizNotificationsButton from '../../../telebiz/components/left/TelebizNotifications/TelebizNotificationsButton';
 import Icon from '../../common/icons/Icon';
 import MainMenuDropdown from '../../common/MainMenuDropdown';
 import PeerChip from '../../common/PeerChip';
@@ -289,7 +288,6 @@ const LeftMainHeader = ({
           />
         </SearchInput>
         {isCurrentUserPremium && <StatusButton />}
-        <TelebizNotificationsButton />
         {hasPasscode && (
           <Button
             round

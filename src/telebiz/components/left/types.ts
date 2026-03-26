@@ -19,6 +19,5 @@ export enum TelebizSettingsScreens {
   TemplatesChats,
   ManageTemplatesChats,
   FocusMode,
-  Billing,
   PendingReminders,
 }

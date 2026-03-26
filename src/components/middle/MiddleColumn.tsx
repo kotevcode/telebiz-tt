@@ -37,8 +37,6 @@ import {
   selectChatFullInfo,
   selectCurrentMessageList,
   selectCurrentMiddleSearch,
-  selectDraft,
-  selectEditingId,
   selectIsChatBotNotStarted,
   selectIsCurrentUserFrozen,
   selectIsInSelectMode,
@@ -50,12 +48,12 @@ import {
   selectTabState,
   selectTheme,
   selectThemeValues,
-  selectThreadInfo,
   selectTopic,
   selectTopics,
   selectUserFullInfo,
 } from '../../global/selectors';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
+import { selectDraft, selectEditingId, selectThreadInfo } from '../../global/selectors/threads';
 import { IS_TAURI } from '../../util/browser/globalEnvironment';
 import {
   IS_ANDROID, IS_IOS, IS_MAC_OS, IS_SAFARI, IS_TRANSLATION_SUPPORTED, MASK_IMAGE_DISABLED,
@@ -827,7 +825,9 @@ export default memo(withGlobal<OwnProps>(
     const topics = selectTopics(global, chatId);
 
     const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
-    const canShowOpenChatButton = isSavedDialog && threadId !== ANONYMOUS_USER_ID;
+    const canShowOpenChatButton = isSavedDialog
+      && threadId !== ANONYMOUS_USER_ID
+      && threadId !== global.currentUserId;
 
     const canUnpin = chat && (
       isPrivate || (

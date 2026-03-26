@@ -37,6 +37,7 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       birthday, personalChannelId, personalChannelMessage, sponsoredEnabled, stargiftsCount, botVerification,
       botCanManageEmojiStatus, settings, sendPaidMessagesStars, displayGiftsButton, disallowedGifts,
       starsRating, starsMyPendingRating, starsMyPendingRatingDate, mainTab, note,
+      noforwardsMyEnabled, noforwardsPeerEnabled,
     },
     users,
   } = mtpUserFull;
@@ -77,6 +78,8 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     settings: buildApiPeerSettings(settings),
     mainTab: mainTab && buildApiProfileTab(mainTab),
     note: note && buildApiFormattedText(note),
+    noForwardsMyEnabled: noforwardsMyEnabled,
+    noForwardsPeerEnabled: noforwardsPeerEnabled,
   };
 }
 
@@ -112,7 +115,7 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
   const {
     id, firstName, lastName, fake, scam, support, closeFriend, storiesUnavailable,
     bot, botActiveUsers, botVerificationIcon, botInlinePlaceholder, botAttachMenu, botCanEdit,
-    sendPaidMessagesStars, profileColor, botForumView,
+    sendPaidMessagesStars, profileColor, botForumView, botForumCanManageTopics,
   } = mtpUser;
   const storiesMaxId = mtpUser.storiesMaxId?.maxId;
   const hasVideoAvatar = mtpUser.photo instanceof GramJs.UserProfilePhoto ? Boolean(mtpUser.photo.hasVideo) : undefined;
@@ -157,6 +160,7 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
     profileColor: profileColor && buildApiPeerColor(profileColor),
     paidMessagesStars: toJSNumber(sendPaidMessagesStars),
     isBotForum: botForumView,
+    canManageBotForumTopics: botForumCanManageTopics,
   };
 }
 

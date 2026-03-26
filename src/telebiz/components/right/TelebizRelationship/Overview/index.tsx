@@ -26,7 +26,7 @@ import {
   selectTelebizPropertiesByEntityType,
   selectTelebizSelectedRelationship,
 } from '../../../../global/selectors';
-import { formatPastTimeShort } from '../../../../../util/dates/dateFormat';
+import { formatPastTimeShort } from '../../../../../util/dates/oldDateFormat';
 import { formatDate, formatDateTime } from '../../../../util/dates';
 import { getOwnerDisplayString } from '../../../../util/general';
 import { formatNotionProperty } from '../../../../util/notion';

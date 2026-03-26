@@ -41,12 +41,8 @@ export function updateTelebizOrganization<T extends GlobalState>(
   const updatedOrganizations = current.organizations.map((o) =>
     o.id === organizationId ? organization : o);
 
-  // Also update currentOrganization if it's the one being updated
-  const isCurrentOrg = current.currentOrganization?.id === organizationId;
-
   return updateTelebizOrganizations(global, {
     organizations: updatedOrganizations,
-    currentOrganization: isCurrentOrg ? organization : current.currentOrganization,
   });
 }
 

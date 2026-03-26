@@ -6,7 +6,7 @@ import { type Notification, NotificationStatus, NotificationType } from '../../.
 
 import { selectChat } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
-import { formatPastDatetime } from '../../../../util/dates/dateFormat';
+import { formatPastDatetime } from '../../../../util/dates/oldDateFormat';
 import { getCurrentTabId } from '../../../../util/establishMultitabRole';
 
 import useContextMenuHandlers from '../../../../hooks/useContextMenuHandlers';

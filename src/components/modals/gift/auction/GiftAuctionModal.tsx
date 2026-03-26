@@ -9,7 +9,7 @@ import type { TabState } from '../../../../global/types';
 import { TME_LINK_PREFIX } from '../../../../config';
 import { selectTabState } from '../../../../global/selectors';
 import { copyTextToClipboard } from '../../../../util/clipboard';
-import { formatCountdown, formatDateTimeToString } from '../../../../util/dates/dateFormat';
+import { formatCountdown, formatDateTimeToString } from '../../../../util/dates/oldDateFormat';
 import { HOUR } from '../../../../util/dates/units';
 import { formatStarsAsIcon } from '../../../../util/localization/format';
 import { getServerTime } from '../../../../util/serverTime';
@@ -196,7 +196,12 @@ const GiftAuctionModal = ({ modal, auctionState }: OwnProps & StateProps) => {
             {lang('GiftAuctionTopBidders', {
               count: giftsPerRound,
               gift: <span className={styles.giftName}>{giftTitle}</span>,
-              link: <Link isPrimary onClick={handleLearnMoreClick}>{lang('GiftAuctionLearnMore')}</Link>,
+              link: (
+                <Link isPrimary onClick={handleLearnMoreClick}>
+                  {lang('GiftAuctionLearnMore', undefined,
+                    { withNodes: true })}
+                </Link>
+              ),
             }, { pluralValue: giftsPerRound, withNodes: true, withMarkdown: true })}
           </p>
         )}

@@ -10,8 +10,7 @@ import { TelebizSettingsScreens } from '../../left/types';
 
 import { requestForcedReflow, requestMutation } from '../../../../lib/fasterdom/fasterdom';
 import {
-  selectCurrentTelebizOrganization,
-  selectIsAnyAIProviderConnected,
+  selectIsActiveProviderConnected,
   selectIsTelebizAgentConnecting,
   selectTelebizAgentConfig,
   selectTelebizAgentError,
@@ -33,11 +32,7 @@ import useAgentSkillTooltip from './hooks/useAgentSkillTooltip';
 import MentionTooltip from '../../../../components/middle/composer/MentionTooltip';
 import Button from '../../../../components/ui/Button';
 import TextArea from '../../../../components/ui/TextArea';
-import type { Organization } from '../../../services/types';
-
-import SubscriptionBanner from '../../common/SubscriptionBanner';
 import TelebizFeaturesList from '../../common/TelebizFeaturesList';
-import CompleteSteps from '../TelebizAddRelationship/CompleteSteps';
 import AgentModalLogo from '../../icons/AgentModalLogo';
 import NewAiChat from '../../icons/NewAiChat';
 import AgentMessage from './AgentMessage';
@@ -64,7 +59,6 @@ const MODES: { id: AgentMode; label: string; description: string }[] = [
 ];
 
 type StateProps = {
-  currentOrganization?: Organization;
   isConnected: boolean;
   isConnecting: boolean;
   isRunning: boolean;
@@ -84,7 +78,6 @@ type StateProps = {
 };
 
 const TelebizAgent: FC<StateProps> = ({
-  currentOrganization,
   isConnected,
   isConnecting,
   isRunning,
@@ -272,9 +265,7 @@ const TelebizAgent: FC<StateProps> = ({
     });
   }, [availableModels, isLoadingModels, config.model]);
 
-  const hasStepsToComplete = !currentOrganization || !isConnected;
-
-  if (hasStepsToComplete) {
+  if (!isConnected) {
     return (
       <div className={styles.container}>
         <div className={styles.setupRequired}>
@@ -283,26 +274,15 @@ const TelebizAgent: FC<StateProps> = ({
           </div>
           <h3>{lang('Agent.SetupRequired')}</h3>
           <p>{lang('Agent.SetupDescription')}</p>
-          <CompleteSteps
-            steps={[
-              {
-                number: 1,
-                checked: Boolean(currentOrganization),
-                disabled: false,
-                title: lang('CompleteSteps.JoinWorkspace'),
-                screen: TelebizSettingsScreens.Main,
-                screenName: lang('CompleteSteps.Workspaces'),
-              },
-              {
-                number: 2,
-                checked: isConnected,
-                disabled: !currentOrganization,
-                title: lang('CompleteSteps.ConnectAIProvider'),
-                screen: TelebizSettingsScreens.AIIntegrations,
-                screenName: lang('CompleteSteps.AIIntegrations'),
-              },
-            ]}
-          />
+          <button
+            type="button"
+            className={styles.setupButton}
+            onClick={handleConnect}
+            disabled={isConnecting}
+          >
+            {isConnecting ? lang('Agent.Connecting') : lang('Agent.ConnectOpenRouter')}
+          </button>
+
           {error && (
             <div className={styles.setupError}>
               <span>{error}</span>
@@ -310,7 +290,10 @@ const TelebizAgent: FC<StateProps> = ({
           )}
         </div>
         <div className={styles.featurePromoContainer}>
-          <TelebizFeaturesList showWelcome />
+          {/* Features List */}
+          <TelebizFeaturesList
+            showWelcome
+          />
         </div>
       </div>
     );
@@ -318,7 +301,6 @@ const TelebizAgent: FC<StateProps> = ({
 
   return (
     <div className={styles.container}>
-      <SubscriptionBanner />
       <div
         ref={messagesContainerRef}
         className={buildClassName(styles.messagesContainer, 'custom-scroll')}
@@ -474,8 +456,7 @@ const TelebizAgent: FC<StateProps> = ({
 
 export default memo(withGlobal(
   (global): Complete<StateProps> => ({
-    currentOrganization: selectCurrentTelebizOrganization(global),
-    isConnected: selectIsAnyAIProviderConnected(global),
+    isConnected: selectIsActiveProviderConnected(global),
     isConnecting: selectIsTelebizAgentConnecting(global),
     isRunning: selectTelebizAgentIsRunning(global),
     messages: selectTelebizAgentMessages(global),

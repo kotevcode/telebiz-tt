@@ -39,11 +39,3 @@ export const ORGANIZATION_OWNER_ROLE = 'org_owner';
 export const ORGANIZATION_ADMIN_ROLE = 'org_admin';
 export const ORGANIZATION_MEMBER_ROLE = 'org_member';
 export const ORGANIZATION_MANAGER_ROLES = [ORGANIZATION_OWNER_ROLE, ORGANIZATION_ADMIN_ROLE];
-
-// Paddle Configuration
-export const PADDLE_CLIENT_TOKEN = process.env.PADDLE_CLIENT_TOKEN || '';
-export const IS_PADDLE_SANDBOX = process.env.PADDLE_SANDBOX === 'true';
-
-// Trial Configuration
-export const TRIAL_PERIOD_DAYS = 14;
-export const PRICE_PER_SEAT_MONTHLY = 99;

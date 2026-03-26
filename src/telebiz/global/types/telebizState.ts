@@ -11,6 +11,7 @@ import type {
   OpenRouterModel,
   Skill,
   ThinkingState,
+  WebSearchMode,
 } from '../../agent/types';
 import type {
   ChatFollowupSettings,
@@ -18,7 +19,6 @@ import type {
   LoadingType,
   Notification,
   Organization,
-  Plan,
   PropertiesByEntityType,
   Provider,
   ProviderEntity,
@@ -28,7 +28,6 @@ import type {
   ProviderRelationship,
   Reminder,
   Role,
-  Subscription,
   Team,
   TelebizUser,
   UserSettings,
@@ -184,6 +183,15 @@ export interface TelebizAgentState {
   isMcpEnabled: boolean;
   isMcpConnected: boolean;
   skills: TelebizSkillsState;
+  /** Web search configuration */
+  webSearch?: {
+    /** Whether web search is enabled */
+    enabled: boolean;
+    /** Search mode (auto/native/exa) */
+    mode: WebSearchMode;
+    /** Maximum search results per query */
+    maxResults: number;
+  };
 }
 
 export interface TelebizSkillsState {
@@ -224,16 +232,6 @@ export interface TelebizSettingsState {
   error?: string;
 }
 
-export interface TelebizSubscriptionState {
-  // Subscriptions keyed by organization ID
-  subscriptionsByOrgId: Record<number, Subscription>;
-  plans: Plan[];
-  selectedPlanId?: string;
-  isLoading: boolean;
-  isLoadingPlans: boolean;
-  error?: string;
-}
-
 export interface TelebizState {
   auth: TelebizAuthState;
   organizations: TelebizOrganizationsState;
@@ -244,7 +242,6 @@ export interface TelebizState {
   agent: TelebizAgentState;
   templatesChats: TelebizTemplatesChatsState;
   settings: TelebizSettingsState;
-  subscription: TelebizSubscriptionState;
   bulkSend: TelebizBulkSendState;
 }
 
@@ -282,9 +279,6 @@ export interface TelebizTabState {
   enableAgentModal?: {
     isOpen: boolean;
     hasAcceptedRisk?: boolean;
-  };
-  subscriptionBlockedModal?: {
-    isOpen: boolean;
   };
   featuresModal?: {
     isOpen: boolean;

@@ -83,7 +83,7 @@ const TelebizIntegrations: FC<StateProps> = ({
               <a
                 className="text-entity-link"
                 onClick={() => {
-                  openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Main });
+                  openTelebizSettingsScreen({ screen: TelebizSettingsScreens.Organizations });
                 }}
               >
                 Learn more

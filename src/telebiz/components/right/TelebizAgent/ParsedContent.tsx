@@ -225,6 +225,7 @@ const ParsedContent = ({ content, className }: OwnProps) => {
     let unorderedListItems: TeactNode[] = [];
     let inOrderedList = false;
     let orderedListItems: TeactNode[] = [];
+    let orderedListStart = 1; // Track where the next ordered list should start
 
     // Code block state
     let inCodeBlock = false;
@@ -241,7 +242,13 @@ const ParsedContent = ({ content, className }: OwnProps) => {
 
     const flushOrderedList = (key: string) => {
       if (orderedListItems.length > 0) {
-        elements.push(<ol key={key} className={styles.orderedList}>{orderedListItems}</ol>);
+        const olProps = orderedListStart > 1 ? { start: orderedListStart } : {};
+        elements.push(
+          <ol key={key} className={styles.orderedList} {...olProps}>
+            {orderedListItems}
+          </ol>,
+        );
+        orderedListStart += orderedListItems.length; // Continue numbering
         orderedListItems = [];
       }
       inOrderedList = false;
@@ -284,8 +291,8 @@ const ParsedContent = ({ content, className }: OwnProps) => {
         return;
       }
 
-      // Handle unordered list items (- item)
-      if (trimmed.startsWith('- ')) {
+      // Handle unordered list items (- item or * item)
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
         flushOrderedList(`ol-${index}`);
         if (!inUnorderedList) {
           inUnorderedList = true;

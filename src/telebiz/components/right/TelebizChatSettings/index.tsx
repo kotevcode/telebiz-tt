@@ -9,7 +9,7 @@ import { TelebizSettingsScreens } from '../../left/types';
 
 import { selectChat } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
-import { formatDateAtTime, formatTimeDuration } from '../../../../util/dates/dateFormat';
+import { formatDateAtTime, formatTimeDuration } from '../../../../util/dates/oldDateFormat';
 
 import { useVtn } from '../../../../hooks/animations/useVtn';
 import useLastCallback from '../../../../hooks/useLastCallback';

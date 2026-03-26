@@ -6,7 +6,7 @@ import type { ApiPromoData, ApiSession } from '../../../../api/types';
 
 import { FRESH_AUTH_PERIOD } from '../../../../config';
 import { requestMutation } from '../../../../lib/fasterdom/fasterdom';
-import { selectIsCurrentUserFrozen } from '../../../../global/selectors';
+import { selectIsCurrentUserFrozen, selectIsForumPanelOpen } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 import { getServerTime } from '../../../../util/serverTime';
 import { REM } from '../../../common/helpers/mediaDimensions';
@@ -16,8 +16,8 @@ import useShowTransition from '../../../../hooks/useShowTransition';
 import { useSignalEffect } from '../../../../hooks/useSignalEffect';
 import { applyAnimationState, type PaneState } from '../../../middle/hooks/useHeaderPane';
 
-import TrialPane from '../../../../telebiz/components/common/TrialPane';
 import FrozenAccountPane from './FrozenAccountPane';
+import GiftAuctionPane from './GiftAuctionPane';
 import SuggestionPane from './SuggestionPane';
 import UnconfirmedSessionPane from './UnconfirmedSessionPane';
 
@@ -32,10 +32,11 @@ type StateProps = {
   sessions: Record<string, ApiSession>;
   promoData?: ApiPromoData;
   isAccountFrozen?: boolean;
+  isForumPanelOpen?: boolean;
 };
 
-const TOP_MARGIN = 0.5 * REM;
-const BOTTOM_MARGIN = 0.25 * REM;
+const ITEM_MARGIN = 0.25 * REM;
+const BOTTOM_MARGIN = 0.5 * REM;
 const FALLBACK_PANE_STATE = { height: 0 };
 
 const ChatListPanes = ({
@@ -43,12 +44,13 @@ const ChatListPanes = ({
   sessions,
   promoData,
   isAccountFrozen,
+  isForumPanelOpen,
   onHeightChange,
 }: OwnProps & StateProps) => {
   const [getUnconfirmedSessionHeight, setUnconfirmedSessionHeight] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getFrozenAccountState, setFrozenAccountState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
+  const [getGiftAuctionState, setGiftAuctionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getSuggestionState, setSuggestionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
-  const [getTrialState, setTrialState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
 
   const isFirstRenderRef = useRef(true);
   const {
@@ -72,23 +74,31 @@ const ChatListPanes = ({
     return sessionsArray.find((session) => session.isUnconfirmed);
   }, [sessions]);
 
-  const canShowUnconfirmedSession = !isAccountFrozen && unconfirmedSession;
-  const canShowSuggestions = !isAccountFrozen && !unconfirmedSession && promoData;
+  const canShowUnconfirmedSession = !isAccountFrozen && !isForumPanelOpen && unconfirmedSession;
+  const canShowSuggestions = !isAccountFrozen && !isForumPanelOpen && !unconfirmedSession && promoData;
+  const canShowGiftAuctions = !isAccountFrozen && !isForumPanelOpen;
 
   useSignalEffect(() => {
     const unconfirmedSessionHeight = getUnconfirmedSessionHeight();
     const frozenAccountHeight = getFrozenAccountState();
+    const giftAuctionHeight = getGiftAuctionState();
     const suggestionHeight = getSuggestionState();
-    const trialHeight = getTrialState();
 
     // Keep in sync with the order of the panes in the DOM
-    const stateArray = [trialHeight, unconfirmedSessionHeight, frozenAccountHeight, suggestionHeight];
+    const stateArray = [
+      unconfirmedSessionHeight,
+      frozenAccountHeight,
+      giftAuctionHeight,
+      { height: giftAuctionHeight.height ? ITEM_MARGIN : 0, isSpacer: true },
+      suggestionHeight,
+      { height: BOTTOM_MARGIN, isSpacer: true },
+    ];
 
     const isFirstRender = isFirstRenderRef.current;
-    const panelsHeight = stateArray.reduce((acc, state) => acc + state.height, 0);
-    const totalHeight = panelsHeight ? panelsHeight + BOTTOM_MARGIN : 0;
+    const totalHeight = stateArray.reduce((acc, state) => acc + state.height, 0);
+    const panelsHeight = totalHeight - BOTTOM_MARGIN;
 
-    onHeightChange(totalHeight);
+    onHeightChange(panelsHeight !== 0 ? totalHeight : 0);
 
     const leftColumn = document.getElementById('LeftColumn');
     if (!leftColumn) return;
@@ -96,7 +106,6 @@ const ChatListPanes = ({
     applyAnimationState({
       list: stateArray,
       noTransition: isFirstRender,
-      topMargin: TOP_MARGIN,
       zIndexIncrease: true,
     });
 
@@ -105,7 +114,7 @@ const ChatListPanes = ({
         '--chat-list-panes-height': `${totalHeight}px`,
       });
     });
-  }, [getTrialState, getUnconfirmedSessionHeight, getFrozenAccountState, getSuggestionState]);
+  }, [getUnconfirmedSessionHeight, getFrozenAccountState, getSuggestionState, getGiftAuctionState]);
 
   if (!shouldRender) return undefined;
 
@@ -119,9 +128,6 @@ const ChatListPanes = ({
         )
       }
     >
-      <TrialPane
-        onPaneStateChange={setTrialState}
-      />
       <FrozenAccountPane
         isAccountFrozen={isAccountFrozen}
         onPaneStateChange={setFrozenAccountState}
@@ -129,6 +135,10 @@ const ChatListPanes = ({
       <UnconfirmedSessionPane
         unconfirmedSession={canShowUnconfirmedSession ? unconfirmedSession : undefined}
         onPaneStateChange={setUnconfirmedSessionHeight}
+      />
+      <GiftAuctionPane
+        canShow={canShowGiftAuctions}
+        onPaneStateChange={setGiftAuctionState}
       />
       <SuggestionPane
         promoData={canShowSuggestions ? promoData : undefined}
@@ -141,6 +151,7 @@ const ChatListPanes = ({
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     return {
+      isForumPanelOpen: selectIsForumPanelOpen(global),
       sessions: global.activeSessions.byHash,
       promoData: global.promoData,
       isAccountFrozen: selectIsCurrentUserFrozen(global),

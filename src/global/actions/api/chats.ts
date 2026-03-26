@@ -40,7 +40,7 @@ import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getOrderedIds } from '../../../util/folderManager';
 import {
-  buildCollectionByKey, omit, pick, unique,
+  buildCollectionByKey, omit, unique,
 } from '../../../util/iteratees';
 import { isLocalMessageId } from '../../../util/keys/messageKey';
 import * as langProvider from '../../../util/oldLangProvider';
@@ -57,7 +57,7 @@ import {
   isUserBot,
 } from '../../helpers';
 import {
-  addActionHandler, getGlobal, setGlobal,
+  addActionHandler, getActions, getGlobal, setGlobal,
 } from '../../index';
 import {
   addChatListIds,
@@ -79,28 +79,35 @@ import {
   replaceMessages,
   replaceNotifyExceptions,
   replaceSimilarChannels,
-  replaceThreadParam,
   replaceUserStatuses,
   toggleSimilarChannels,
   updateChat,
   updateChatFullInfo,
   updateChatLastMessageId,
   updateChatListSecondaryInfo,
+  updateChatParticipantRank,
   updateChats,
   updateChatsLastMessageId,
   updateListedTopicIds,
   updateManagementProgress,
   updateMissingInvitedUsers,
   updatePeerFullInfo,
-  updateThread,
-  updateThreadInfo,
   updateTopic,
-  updateTopics,
+  updateTopicsInfo,
+  updateTopicWithState,
   updateUser,
   updateUsers,
 } from '../../reducers';
 import { updateGroupCall } from '../../reducers/calls';
 import { updateTabState } from '../../reducers/tabs';
+import {
+  replaceThreadLocalStateParam,
+  replaceThreadReadStateParam,
+  updateMainThreadReadStates,
+  updateThreadInfo,
+  updateThreadInfoLastMessageId,
+  updateThreadReadState,
+} from '../../reducers/threads';
 import {
   selectChat,
   selectChatByUsername,
@@ -112,7 +119,6 @@ import {
   selectChatMessages,
   selectCurrentChat,
   selectCurrentMessageList,
-  selectDraft,
   selectIsChatPinned,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
@@ -123,8 +129,6 @@ import {
   selectStickerSet,
   selectSupportChat,
   selectTabState,
-  selectThread,
-  selectThreadInfo,
   selectTopic,
   selectTopics,
   selectTopicsInfo,
@@ -133,6 +137,13 @@ import {
 } from '../../selectors';
 import { selectGroupCall } from '../../selectors/calls';
 import { selectCurrentLimit } from '../../selectors/limits';
+import {
+  selectDraft,
+  selectThread,
+  selectThreadInfo,
+  selectThreadLocalState,
+  selectThreadReadState,
+} from '../../selectors/threads';
 
 const TOP_CHAT_MESSAGES_PRELOAD_INTERVAL = 100;
 const INFINITE_LOOP_MARKER = 100;
@@ -227,12 +238,14 @@ addActionHandler('openChat', (global, actions, payload): ActionReturnType => {
   }
 
   const chat = selectChat(global, id);
+  const threadInfo = selectThreadInfo(global, id, MAIN_THREAD_ID);
+  const chatReadState = selectThreadReadState(global, id, MAIN_THREAD_ID);
 
-  if (chat?.hasUnreadMark) {
+  if (chatReadState?.hasUnreadMark) {
     actions.markChatRead({ id });
   }
 
-  const isChatOnlySummary = !selectChatLastMessageId(global, id);
+  const isChatOnlySummary = !threadInfo || !selectChatLastMessageId(global, id);
 
   if (!chat) {
     if (selectIsChatWithSelf(global, id)) {
@@ -308,14 +321,17 @@ addActionHandler('openThread', async (global, actions, payload): Promise<void> =
 
   const chat = selectChat(global, loadingChatId);
   const threadInfo = selectThreadInfo(global, loadingChatId, loadingThreadId);
-  const thread = selectThread(global, loadingChatId, loadingThreadId);
+  const threadLocalState = selectThreadLocalState(global, loadingChatId, loadingThreadId);
   if (!chat) return;
 
   abortChatRequestsForCurrentChat(global, loadingChatId, loadingThreadId, tabId);
 
   if (chatId
     && threadInfo?.threadId
-    && (isComments || (thread?.listedIds?.length && thread.listedIds.includes(Number(threadInfo.threadId))))) {
+    && (
+      isComments
+      || (threadLocalState?.listedIds?.length && threadLocalState.listedIds.includes(Number(threadInfo.threadId)))
+    )) {
     global = updateTabState(global, {
       loadingThread: undefined,
     }, tabId);
@@ -407,29 +423,10 @@ addActionHandler('openThread', async (global, actions, payload): Promise<void> =
 
   global = getGlobal();
   global = addMessages(global, result.messages);
-  if (isComments) {
-    global = updateThreadInfo(global, loadingChatId, loadingThreadId, {
-      threadId,
-    });
-
-    const lastMessageId = threadInfo?.lastMessageId !== undefined ? threadInfo.lastMessageId
-      : threadInfo?.messagesCount === 0 ? result.threadId : undefined;
-
-    global = updateThreadInfo(global, chatId, threadId, {
-      isCommentsInfo: false,
-      threadId,
-      chatId,
-      fromChannelId: loadingChatId,
-      fromMessageId: loadingThreadId,
-      lastMessageId,
-      ...(threadInfo
-        && pick(threadInfo, ['messagesCount', 'lastReadInboxMessageId', 'recentReplierIds'])
-      ),
-    });
-  }
-  global = updateThread(global, chatId, threadId, {
-    firstMessageId: result.firstMessageId,
-  });
+  global = updateThreadInfo(global, result.threadInfo);
+  global = updateThreadReadState(global, chatId, result.threadId, result.threadReadState);
+  global = updateThreadInfoLastMessageId(global, chatId, result.threadId, result.lastMessageId);
+  global = replaceThreadLocalStateParam(global, chatId, threadId, 'firstMessageId', result.firstMessageId);
   setGlobal(global);
 
   if (focusMessageId) {
@@ -535,16 +532,36 @@ addActionHandler('loadAllChats', async (global, actions, payload): Promise<void>
       return;
     }
 
-    await loadChats(
+    const result = await loadChats(
       listType,
       true,
     );
 
+    const isFirstBatch = !isCallbackFired;
     if (!isCallbackFired) {
       await whenFirstBatchDone?.();
       isCallbackFired = true;
     }
+    global = getGlobal();
 
+    if (result?.messages) {
+      if (isFirstBatch) {
+        global = replaceMessages(global, result.messages);
+      } else {
+        global = addMessages(global, result.messages);
+      }
+    }
+
+    if (result?.threadInfos) {
+      result.threadInfos.forEach((threadInfo) => {
+        global = updateThreadInfo(global, threadInfo);
+      });
+    }
+
+    if (result?.threadReadStatesById) {
+      global = updateMainThreadReadStates(global, result.threadReadStatesById);
+    }
+    setGlobal(global);
     global = getGlobal();
   }
 });
@@ -872,29 +889,160 @@ addActionHandler('deleteChat', (global, actions, payload): ActionReturnType => {
   void callApi('deleteChat', { chatId: chat.id });
 });
 
+async function checkFutureCreatorAndOpenModal(
+  chat: ApiChat,
+  shouldSkipOwnershipCheck: boolean | undefined,
+  tabId: number,
+): Promise<boolean> {
+  if (shouldSkipOwnershipCheck || !chat.isCreator) {
+    return false;
+  }
+
+  const futureCreator = await callApi('fetchFutureCreatorAfterLeave', { chat });
+  if (!futureCreator) {
+    return false;
+  }
+
+  const global = getGlobal();
+  const hasPassword = global.settings.byKey.hasPassword;
+  const actions = getActions();
+  if (!hasPassword) {
+    actions.openTwoFaCheckModal({ tabId });
+    return true;
+  }
+
+  actions.openLeaveGroupModal({ chatId: chat.id, nextOwnerId: futureCreator.id, tabId });
+  return true;
+}
+
+function cleanupAfterLeave(chatId: string, tabId: number) {
+  let global = getGlobal();
+  global = leaveChat(global, chatId);
+  setGlobal(global);
+
+  if (selectCurrentMessageList(global, tabId)?.chatId === chatId) {
+    getActions().openChat({ id: undefined, tabId });
+  }
+
+  global = getGlobal();
+  const chatMessages = selectChatMessages(global, chatId);
+  if (!chatMessages) {
+    return;
+  }
+
+  const localMessageIds = Object.keys(chatMessages).map(Number).filter(isLocalMessageId);
+  if (!localMessageIds.length) {
+    return;
+  }
+
+  global = deleteChatMessages(global, chatId, localMessageIds);
+  setGlobal(global);
+}
+
 addActionHandler('leaveChannel', async (global, actions, payload): Promise<void> => {
-  const { chatId, tabId = getCurrentTabId() } = payload;
+  const { chatId, shouldSkipOwnershipCheck, tabId = getCurrentTabId() } = payload;
   const chat = selectChat(global, chatId);
   if (!chat) {
     return;
   }
 
-  global = leaveChat(global, chatId);
-  setGlobal(global);
-
-  if (selectCurrentMessageList(global, tabId)?.chatId === chatId) {
-    actions.openChat({ id: undefined, tabId });
+  const isModalOpen = await checkFutureCreatorAndOpenModal(chat, shouldSkipOwnershipCheck, tabId);
+  if (isModalOpen) {
+    return;
   }
 
-  const { id: channelId, accessHash } = chat;
-  if (channelId && accessHash) {
-    await callApi('leaveChannel', { channelId, accessHash });
-    global = getGlobal();
-    const chatMessages = selectChatMessages(global, chatId);
-    const localMessageIds = Object.keys(chatMessages).map(Number).filter(isLocalMessageId);
-    global = deleteChatMessages(global, chatId, localMessageIds);
-    setGlobal(global);
+  global = getGlobal();
+  await callApi('leaveChannel', { chat });
+
+  cleanupAfterLeave(chatId, tabId);
+});
+
+addActionHandler('leaveBasicGroup', async (global, actions, payload): Promise<void> => {
+  const { chatId, shouldSkipOwnershipCheck, tabId = getCurrentTabId() } = payload;
+  const chat = selectChat(global, chatId);
+  const currentUserId = global.currentUserId;
+  if (!chat || !currentUserId) {
+    return;
   }
+
+  const isModalOpen = await checkFutureCreatorAndOpenModal(chat, shouldSkipOwnershipCheck, tabId);
+  if (isModalOpen) {
+    return;
+  }
+
+  actions.deleteHistory({ chatId, shouldDeleteForAll: false, tabId });
+
+  global = getGlobal();
+  const user = selectUser(global, currentUserId);
+  if (user) {
+    await callApi('deleteChatUser', { chat, user, shouldRevokeHistory: false });
+  }
+
+  cleanupAfterLeave(chatId, tabId);
+});
+
+addActionHandler('verifyTransferOwnership', async (global, actions, payload): Promise<void> => {
+  const {
+    chatId, userId, onSuccess, onPasswordMissing, onPasswordTooFresh, onSessionTooFresh,
+  } = payload;
+
+  const chat = selectChat(global, chatId);
+  const user = selectUser(global, userId);
+  if (!chat || !user) {
+    return;
+  }
+
+  const result = await callApi('verifyTransferOwnership', {
+    chat,
+    user,
+  });
+
+  if (!result) {
+    return;
+  }
+
+  if ('canTransfer' in result) {
+    onSuccess?.();
+    return;
+  }
+
+  switch (result.errorMessage) {
+    case 'PASSWORD_MISSING':
+      onPasswordMissing?.();
+      break;
+    case 'PASSWORD_TOO_FRESH':
+      onPasswordTooFresh?.();
+      break;
+    case 'SESSION_TOO_FRESH':
+      onSessionTooFresh?.();
+      break;
+    default:
+      break;
+  }
+});
+
+addActionHandler('transferChatOwnership', async (global, actions, payload): Promise<void> => {
+  const {
+    chatId, userId, password, onSuccess,
+  } = payload;
+
+  const chat = selectChat(global, chatId);
+  const user = selectUser(global, userId);
+  if (!chat || !user?.accessHash) {
+    return;
+  }
+
+  const result = await callApi('editChatCreator', {
+    chat,
+    user,
+    password,
+  });
+
+  if (result !== true) {
+    return;
+  }
+
+  onSuccess?.();
 });
 
 addActionHandler('deleteChannel', (global, actions, payload): ActionReturnType => {
@@ -1288,11 +1436,12 @@ addActionHandler('markChatUnread', (global, actions, payload): ActionReturnType 
     actions.openFrozenAccountModal({ tabId: getCurrentTabId() });
     return;
   }
+
   const chat = selectChat(global, id);
   if (!chat) return;
   void callApi('toggleDialogUnread', {
     chat,
-    hasUnreadMark: !chat.hasUnreadMark,
+    hasUnreadMark: true,
   });
 });
 
@@ -1306,12 +1455,14 @@ addActionHandler('markChatMessagesRead', async (global, actions, payload): Promi
   }
 
   const chat = selectChat(global, id);
+  const chatReadState = selectThreadReadState(global, id, MAIN_THREAD_ID);
   if (!chat) return;
+
   if (!chat.isForum) {
     await callApi('markMessageListRead', { chat, threadId: MAIN_THREAD_ID });
     actions.readAllMentions({ chatId: id });
     actions.readAllReactions({ chatId: id });
-    if (chat.hasUnreadMark) {
+    if (chatReadState?.hasUnreadMark) {
       actions.markChatRead({ id });
     }
     return;
@@ -1322,18 +1473,29 @@ addActionHandler('markChatMessagesRead', async (global, actions, payload): Promi
   let processedCount = 0;
 
   while (hasMoreTopics) {
+    const lastTopicThreadInfo = lastTopic && selectThreadInfo(global, id, lastTopic.id);
     const result = await callApi('fetchTopics', {
-      chat, offsetDate: lastTopic?.date, offsetTopicId: lastTopic?.id, offsetId: lastTopic?.lastMessageId, limit: 100,
+      chat,
+      offsetDate: lastTopic?.date,
+      offsetTopicId: lastTopic?.id,
+      offsetId: lastTopicThreadInfo?.lastMessageId,
+      limit: 100,
     });
 
     if (!result?.topics?.length) return;
 
-    result.topics.forEach((topic) => {
-      if (!topic.unreadCount && !topic.unreadMentionsCount && !topic.unreadReactionsCount) return;
-      actions.markTopicRead({ chatId: id, topicId: topic.id });
+    result.topics.forEach((topicWithState) => {
+      global = updateTopicWithState(global, id, topicWithState);
+
+      const { readState } = topicWithState;
+      if (readState && !readState.unreadCount && !readState.unreadMentionsCount && !readState.unreadReactionsCount) {
+        return;
+      }
+
+      actions.markTopicRead({ chatId: id, topicId: topicWithState.topic.id });
     });
 
-    lastTopic = result.topics[result.topics.length - 1];
+    lastTopic = result.topics[result.topics.length - 1].topic;
     processedCount += result.topics.length;
     if (result.count <= processedCount) {
       hasMoreTopics = false;
@@ -1348,7 +1510,7 @@ addActionHandler('markChatRead', (global, actions, payload): ActionReturnType =>
 
   callApi('toggleDialogUnread', {
     chat,
-    hasUnreadMark: !chat.hasUnreadMark,
+    hasUnreadMark: undefined,
   });
 });
 
@@ -1358,9 +1520,8 @@ addActionHandler('markTopicRead', (global, actions, payload): ActionReturnType =
   const chat = selectChat(global, chatId);
   if (!chat) return;
 
-  const topic = selectTopic(global, chatId, topicId);
-
-  const lastTopicMessageId = topic?.lastMessageId;
+  const lastTopicThreadInfo = selectThreadInfo(global, chatId, topicId);
+  const lastTopicMessageId = lastTopicThreadInfo?.lastMessageId;
   if (!lastTopicMessageId) return;
 
   void callApi('markMessageListRead', {
@@ -1372,12 +1533,8 @@ addActionHandler('markTopicRead', (global, actions, payload): ActionReturnType =
   actions.readAllReactions({ chatId, threadId: topicId });
 
   global = getGlobal();
-  global = updateTopic(global, chatId, topicId, {
-    unreadCount: 0,
-  });
-  global = updateThreadInfo(global, chatId, topicId, {
-    lastReadInboxMessageId: lastTopicMessageId,
-  });
+  global = replaceThreadReadStateParam(global, chatId, topicId, 'lastReadInboxMessageId', lastTopicMessageId);
+  global = replaceThreadReadStateParam(global, chatId, topicId, 'unreadCount', 0);
   setGlobal(global);
 });
 
@@ -1925,7 +2082,7 @@ addActionHandler('updateChatAdmin', async (global, actions, payload): Promise<vo
   if (selectIsCurrentUserFrozen(global)) return;
 
   const {
-    chatId, userId, adminRights, customTitle,
+    chatId, userId, adminRights, rank,
     tabId = getCurrentTabId(),
   } = payload;
 
@@ -1939,7 +2096,7 @@ addActionHandler('updateChatAdmin', async (global, actions, payload): Promise<vo
   if (!chat) return;
 
   await callApi('updateChatAdmin', {
-    chat, user, adminRights, customTitle,
+    chat, user, adminRights, rank,
   });
 
   const chatAfterUpdate = await callApi('fetchFullChat', chat);
@@ -1960,7 +2117,7 @@ addActionHandler('updateChatAdmin', async (global, actions, payload): Promise<vo
         [userId]: {
           ...adminMembersById[userId],
           adminRights,
-          customTitle,
+          rank,
         },
       };
     }
@@ -1971,6 +2128,31 @@ addActionHandler('updateChatAdmin', async (global, actions, payload): Promise<vo
     global = updateChatFullInfo(global, chat.id, { adminMembersById: newAdminMembersById });
     setGlobal(global);
   }
+});
+
+addActionHandler('editChatParticipantRank', async (global, actions, payload): Promise<void> => {
+  if (selectIsCurrentUserFrozen(global)) {
+    return;
+  }
+
+  const {
+    chatId, userId, rank,
+  } = payload;
+
+  const chat = selectChat(global, chatId);
+  const peer = selectPeer(global, userId);
+  if (!chat || !peer) {
+    return;
+  }
+
+  const isUpdated = await callApi('editChatParticipantRank', { chat, peer, rank });
+  if (!isUpdated) {
+    return;
+  }
+
+  global = getGlobal();
+  global = updateChatParticipantRank(global, chat.id, userId, rank);
+  setGlobal(global);
 });
 
 addActionHandler('updateChat', async (global, actions, payload): Promise<void> => {
@@ -2396,16 +2578,19 @@ addActionHandler('loadTopics', async (global, actions, payload): Promise<void> =
   }
 
   const offsetTopic = !force ? topicsInfo?.listedTopicIds?.reduce((acc, el) => {
-    const topic = selectTopic(global, chatId, el);
-    const accTopic = selectTopic(global, chatId, acc);
-    if (!topic) return acc;
-    if (!accTopic || topic.lastMessageId < accTopic.lastMessageId) {
+    const topicThreadInfo = selectThreadInfo(global, chatId, el);
+    const accTopicThreadInfo = selectThreadInfo(global, chatId, acc);
+    if (!topicThreadInfo?.lastMessageId) return acc;
+    if (!accTopicThreadInfo?.lastMessageId || topicThreadInfo.lastMessageId < accTopicThreadInfo.lastMessageId) {
       return el;
     }
     return acc;
   }) : undefined;
 
-  const { id: offsetTopicId, date: offsetDate, lastMessageId: offsetId } = (offsetTopic
+  const offsetTopicThreadInfo = offsetTopic ? selectThreadInfo(global, chatId, offsetTopic) : undefined;
+  const offsetId = offsetTopicThreadInfo?.lastMessageId;
+
+  const { id: offsetTopicId, date: offsetDate } = (offsetTopic
     && selectTopic(global, chatId, offsetTopic)) || {};
   const result = await callApi('fetchTopics', {
     chat, offsetTopicId, offsetId, offsetDate, limit: offsetTopicId ? TOPICS_SLICE : TOPICS_SLICE_SECOND_LOAD,
@@ -2415,13 +2600,15 @@ addActionHandler('loadTopics', async (global, actions, payload): Promise<void> =
 
   global = getGlobal();
   global = addMessages(global, result.messages);
-  global = updateTopics(global, chatId, result.count, result.topics);
-  global = updateListedTopicIds(global, chatId, result.topics.map((topic) => topic.id));
-  Object.entries(result.draftsById || {}).forEach(([threadId, draft]) => {
-    global = replaceThreadParam(global, chatId, Number(threadId), 'draft', draft);
+  result.topics.forEach((topic) => {
+    global = updateTopicWithState(global, chatId, topic);
   });
-  Object.entries(result.readInboxMessageIdByTopicId || {}).forEach(([topicId, messageId]) => {
-    global = updateThreadInfo(global, chatId, Number(topicId), { lastReadInboxMessageId: messageId });
+  global = updateTopicsInfo(global, chatId, {
+    totalCount: result.count,
+  });
+  global = updateListedTopicIds(global, chatId, result.topics.map((topicState) => topicState.topic.id));
+  Object.entries(result.draftsById || {}).forEach(([threadId, draft]) => {
+    global = replaceThreadLocalStateParam(global, chatId, Number(threadId), 'draft', draft);
   });
 
   setGlobal(global);
@@ -2445,8 +2632,7 @@ addActionHandler('loadTopicById', async (global, actions, payload): Promise<void
 
   global = getGlobal();
   global = addMessages(global, result.messages);
-  global = updateTopic(global, chatId, topicId, result.topic);
-
+  global = updateTopicWithState(global, chatId, result.topic);
   setGlobal(global);
 });
 
@@ -2918,7 +3104,7 @@ addActionHandler('updateChatDetectedLanguage', (global, actions, payload): Actio
   global = getGlobal();
   global = updateChat(global, chatId, {
     detectedLanguage,
-  }, undefined, true);
+  });
 
   return global;
 });
@@ -3137,6 +3323,29 @@ addActionHandler('requestCollectibleInfo', async (global, actions, payload): Pro
   setGlobal(global);
 });
 
+addActionHandler('loadDiscussion', async (global, actions, payload): Promise<void> => {
+  const { chatId, threadId } = payload;
+  const chat = selectChat(global, chatId);
+  if (!chat) return;
+
+  const result = await callApi('fetchDiscussionMessage', {
+    chat,
+    messageId: threadId,
+  });
+
+  if (!result) {
+    return;
+  }
+
+  global = getGlobal();
+  global = addMessages(global, result.messages);
+  global = updateThreadInfo(global, result.threadInfo);
+  global = updateThreadReadState(global, chatId, result.threadId, result.threadReadState);
+  global = updateThreadInfoLastMessageId(global, chatId, result.threadId, result.lastMessageId);
+  global = replaceThreadLocalStateParam(global, chatId, threadId, 'firstMessageId', result.firstMessageId);
+  setGlobal(global);
+});
+
 async function loadChats(
   listType: ChatListType,
   isFullDraftSync?: boolean,
@@ -3153,8 +3362,10 @@ async function loadChats(
   const isFirstBatch = !shouldIgnorePagination && !offsetPeer && !offsetDate && !offsetId;
   const shouldReplaceStaleState = listType === 'active' && isFirstBatch;
   const isAccountFreeze = selectIsCurrentUserFrozen(global);
+  const currentUser = selectUser(global, global.currentUserId!)!;
 
   const result = listType === 'saved' ? await callApi('fetchSavedChats', {
+    parentPeer: currentUser,
     limit: CHAT_LIST_LOAD_SLICE,
     offsetDate,
     offsetId,
@@ -3198,7 +3409,6 @@ async function loadChats(
   }
 
   global = updateChatListSecondaryInfo(global, listType, result);
-  global = replaceMessages(global, result.messages);
   global = updateChatsLastMessageId(global, result.lastMessageByChatId, listType);
 
   if (!shouldIgnorePagination) {
@@ -3216,7 +3426,7 @@ async function loadChats(
       if (!draft && !thread) return;
 
       if (!selectDraft(global, chatId, MAIN_THREAD_ID)?.isLocal) {
-        global = replaceThreadParam(
+        global = replaceThreadLocalStateParam(
           global, chatId, MAIN_THREAD_ID, 'draft', draft,
         );
       }
@@ -3237,6 +3447,12 @@ async function loadChats(
   }
 
   setGlobal(global);
+
+  return {
+    threadInfos: result.threadInfos,
+    threadReadStatesById: result.threadReadStatesById,
+    messages: result.messages,
+  };
 }
 
 export async function loadFullChat<T extends GlobalState>(
@@ -3540,7 +3756,7 @@ async function openChatWithParams<T extends GlobalState>(
       let topic = selectTopics(global, chat.id)?.[messageId];
       if (!topic) {
         const topicResult = await callApi('fetchTopicById', { chat, topicId: messageId });
-        topic = topicResult?.topic;
+        topic = topicResult?.topic.topic;
       }
 
       if (topic) {

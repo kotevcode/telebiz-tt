@@ -8,7 +8,7 @@ import { NotificationType } from '../../../services/types';
 
 import { selectChat, selectChatMessage } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
-import { formatPastDatetime } from '../../../../util/dates/dateFormat';
+import { formatPastDatetime } from '../../../../util/dates/oldDateFormat';
 import { getCurrentTabId } from '../../../../util/establishMultitabRole';
 
 import useHeaderPane, { type PaneState } from '../../../../components/middle/hooks/useHeaderPane';

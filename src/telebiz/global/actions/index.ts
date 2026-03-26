@@ -8,6 +8,5 @@ import './reminders';
 import './templatesChats';
 import './agent';
 import './settings';
-import './subscription';
 import './ui';
 import './bulkSend';

@@ -1,8 +1,10 @@
 import type {
   AgentConfig,
   AgentMessage,
+  MessageAnnotation,
   OpenRouterModel,
   ReasoningDetail,
+  SearchAnnotation,
   StreamCallback,
   ToolCall,
   ToolDefinition,
@@ -20,6 +22,88 @@ const DEFAULT_AGENT_CONFIG: AgentConfig = {
 
 // Timeout for streaming (30 seconds without any data)
 const STREAM_TIMEOUT_MS = 30000;
+
+/**
+ * Build plugins configuration from agent config
+ * OpenRouter expects plugins as an array: [{ id: 'web', max_results: N }]
+ */
+function buildPluginsConfig(config: Partial<AgentConfig>): Array<Record<string, unknown>> | undefined {
+  if (!config.plugins?.web) return undefined;
+
+  const webPlugin: Record<string, unknown> = { id: 'web' };
+
+  // Pass engine mode (e.g. "native") so the provider controls when to search
+  const engine = config.plugins.web;
+  if (engine !== 'auto') {
+    webPlugin.engine = engine;
+  }
+
+  if (config.webSearchOptions?.num_results !== undefined) {
+    webPlugin.max_results = config.webSearchOptions.num_results;
+  }
+
+  return [webPlugin];
+}
+
+/**
+ * Build web search options from agent config
+ * Only includes search_context_size (max_results is in the plugin object)
+ */
+function buildWebSearchOptions(config: Partial<AgentConfig>): Record<string, unknown> | undefined {
+  if (!config.webSearchOptions?.search_context_size) return undefined;
+
+  return { search_context_size: config.webSearchOptions.search_context_size };
+}
+
+/**
+ * Parse search annotations from OpenRouter response
+ */
+function parseSearchAnnotations(annotations?: Array<{
+  type: string;
+  // Flat format (legacy)
+  text?: string;
+  url?: string;
+  title?: string;
+  favicon?: string;
+  // OpenAI url_citation format (current)
+  url_citation?: {
+    url?: string;
+    title?: string;
+    content?: string;
+    start_index?: number;
+    end_index?: number;
+  };
+}>): SearchAnnotation[] | undefined {
+  if (!annotations || !Array.isArray(annotations)) return undefined;
+
+  const searchResults = annotations
+    .map((ann) => {
+      // OpenAI url_citation format (used by OpenRouter)
+      if (ann.type === 'url_citation' && ann.url_citation) {
+        return {
+          type: 'search_result' as const,
+          text: ann.url_citation.content || ann.url_citation.title || '',
+          url: ann.url_citation.url || '',
+          title: ann.url_citation.title || 'Untitled',
+          favicon: undefined as string | undefined,
+        };
+      }
+      // Flat format fallback
+      if (ann.type === 'search_result') {
+        return {
+          type: 'search_result' as const,
+          text: ann.text || '',
+          url: ann.url || '',
+          title: ann.title || 'Untitled',
+          favicon: ann.favicon,
+        };
+      }
+      return undefined;
+    })
+    .filter((result): result is SearchAnnotation => Boolean(result?.url));
+
+  return searchResults.length > 0 ? searchResults : undefined;
+}
 
 /**
  * Telebiz Agent API Client
@@ -168,6 +252,20 @@ export class AgentApiClient {
       stream: true,
     };
 
+    // Add plugins configuration if web search is enabled
+    const plugins = buildPluginsConfig(mergedConfig);
+    if (plugins) {
+      requestBody.plugins = plugins;
+      logDebugMessage('info', 'OpenRouter web search enabled:', plugins);
+    }
+
+    // Add web search options if specified
+    const webSearchOptions = buildWebSearchOptions(mergedConfig);
+    if (webSearchOptions) {
+      requestBody.web_search_options = webSearchOptions;
+      logDebugMessage('info', 'OpenRouter web search options:', webSearchOptions);
+    }
+
     // For Gemini models, include reasoning in the response
     if (isGeminiModel) {
       requestBody.include = ['reasoning'];
@@ -241,7 +339,8 @@ export class AgentApiClient {
 
           try {
             const parsed = JSON.parse(data);
-            const delta = parsed.choices?.[0]?.delta;
+            const choice = parsed.choices?.[0];
+            const delta = choice?.delta;
 
             if (!delta) continue;
 
@@ -268,6 +367,19 @@ export class AgentApiClient {
                 type: 'reasoning',
                 reasoningDetails: delta.reasoning_details as ReasoningDetail[],
               });
+            }
+
+            // Parse search annotations — can be at top level, delta, or message
+            const annotations = parsed.annotations || delta.annotations || choice?.message?.annotations;
+            if (annotations) {
+              const searchResults = parseSearchAnnotations(annotations);
+              if (searchResults && searchResults.length > 0) {
+                logDebugMessage('info', `OpenRouter returned ${searchResults.length} search results`);
+                onStream({
+                  type: 'annotations',
+                  annotations: { searchResults },
+                });
+              }
             }
 
             if (delta.tool_calls) {

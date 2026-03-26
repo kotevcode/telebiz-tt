@@ -37,11 +37,71 @@ export interface GeminiModel {
   };
 }
 
+/**
+ * Web search plugin mode for OpenRouter
+ * - auto: Tries native search first, falls back to Exa (recommended)
+ * - native: Uses model's native search (Claude/Gemini only)
+ * - exa: Uses Exa.ai universal search (works with all models)
+ */
+export type WebSearchMode = 'auto' | 'native' | 'exa';
+
+/**
+ * Web search options for OpenRouter API
+ */
+export interface WebSearchOptions {
+  /** Number of search results to retrieve (1-20) */
+  num_results?: number;
+  /** Search context size in characters */
+  search_context_size?: number;
+}
+
+/**
+ * Web search annotation in OpenRouter response
+ */
+export interface SearchAnnotation {
+  type: 'search_result';
+  /** Relevant excerpt from the search result */
+  text: string;
+  /** Source URL */
+  url: string;
+  /** Source title */
+  title: string;
+  /** Optional favicon URL */
+  favicon?: string;
+}
+
+/**
+ * Plugin configuration for OpenRouter API
+ */
+export interface PluginConfig {
+  /** Web search mode */
+  web?: WebSearchMode;
+}
+
+/**
+ * Extended agent message with search annotations
+ */
+export interface MessageAnnotation {
+  /** Search result annotations */
+  searchResults?: SearchAnnotation[];
+  /** URLs fetched via web_fetch tool */
+  webFetchUrls?: string[];
+}
+
 // Agent Configuration
 export interface AgentConfig {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  /** Web search plugin configuration (OpenRouter only) */
+  plugins?: PluginConfig;
+  /** Web search options (OpenRouter only) */
+  webSearchOptions?: WebSearchOptions;
+  /** Provider-agnostic web search configuration */
+  webSearch?: {
+    enabled: boolean;
+    maxResults: number;
+  };
 }
 
 // OpenRouter Types
@@ -121,6 +181,8 @@ export interface AgentMessage {
   reasoningDetails?: ReasoningDetail[];
   // How long the agent spent thinking (in seconds)
   thoughtDuration?: number;
+  /** Search result annotations */
+  annotations?: MessageAnnotation;
 }
 
 // Plan Types
@@ -191,12 +253,13 @@ export interface ConfirmationRequest {
 
 // Streaming Types
 export interface StreamDelta {
-  type: 'content' | 'tool_call' | 'reasoning' | 'thinking_start' | 'done' | 'error';
+  type: 'content' | 'tool_call' | 'reasoning' | 'thinking_start' | 'annotations' | 'done' | 'error';
   content?: string;
   toolCall?: Partial<ToolCall>;
   reasoning?: string;
   reasoningDetails?: ReasoningDetail[];
   thinkingTitle?: string; // e.g. "Analyzing chat history"
+  annotations?: MessageAnnotation;
   error?: string;
 }
 
@@ -264,3 +327,35 @@ export interface Skill {
  * - 'onDemand': Only injected when the user explicitly invokes it with /skill-name in their message.
  *               Use for specialized instructions that should only apply when explicitly requested.
  */
+
+/**
+ * Default web search configuration
+ */
+export const DEFAULT_WEB_SEARCH_CONFIG = {
+  enabled: false,  // Disabled by default
+  mode: 'auto' as WebSearchMode,
+  maxResults: 5,
+} as const;
+
+/**
+ * Web search result limits
+ */
+export const WEB_SEARCH_LIMITS = {
+  MIN_RESULTS: 1,
+  MAX_RESULTS: 20,
+  DEFAULT_RESULTS: 5,
+  DEFAULT_CONTEXT_SIZE: 1000,
+} as const;
+
+/**
+ * Models that support native web search
+ */
+export const NATIVE_SEARCH_MODELS = [
+  'anthropic/claude-3.7-sonnet',
+  'anthropic/claude-3.5-sonnet',
+  'anthropic/claude-3.5-haiku',
+  'google/gemini-3-pro-preview',
+  'google/gemini-3-flash-preview',
+  'google/gemini-2.5-pro',
+  'google/gemini-2.5-flash',
+] as const;

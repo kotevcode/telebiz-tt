@@ -4,7 +4,6 @@ import type { ActionReturnType } from '../../../global/types';
 import type { AgentConversation, AgentMessage, AIProvider } from '../../agent/types';
 import type { AgentMode } from '../types';
 
-import { checkSubscriptionGate } from './subscriptionGate';
 import { logDebugMessage } from '../../../util/debugConsole';
 import generateUniqueId from '../../../util/generateUniqueId';
 import { startMcpBridge, stopMcpBridge } from '../../agent/mcp/bridge';
@@ -623,8 +622,6 @@ addActionHandler('deleteAgentConversation', (global, _actions, payload): ActionR
 // ============================================================================
 
 addActionHandler('sendTelebizAgentMessage', async (global, actions, payload): Promise<void> => {
-  if (!checkSubscriptionGate()) return;
-
   const { message } = payload;
   const agentState = selectTelebizAgent(global);
   const { activeProvider } = agentState;
@@ -700,13 +697,30 @@ addActionHandler('sendTelebizAgentMessage', async (global, actions, payload): Pr
 
   const updatedAgentState = selectTelebizAgent(global);
 
+  // Enable web search for both providers — model decides when to use it
+  const WEB_SEARCH_MAX_RESULTS = 5;
+  let mergedConfig = {
+    ...updatedAgentState.config,
+    webSearch: { enabled: true, maxResults: WEB_SEARCH_MAX_RESULTS },
+  };
+
+  // OpenRouter: use engine "native" so the model's provider controls search
+  // (not Exa, which searches on every request)
+  if (activeProvider === 'openrouter') {
+    mergedConfig = {
+      ...mergedConfig,
+      plugins: { web: 'native' as const },
+      webSearchOptions: { num_results: WEB_SEARCH_MAX_RESULTS },
+    };
+  }
+
   try {
     const result = await runAgentLoop(
       {
         accessToken,
         userMessage: message,
         mode: updatedAgentState.mode,
-        config: updatedAgentState.config,
+        config: mergedConfig,
         existingMessages: updatedAgentState.messages,
         abortSignal: abortController.signal,
         provider: activeProvider,

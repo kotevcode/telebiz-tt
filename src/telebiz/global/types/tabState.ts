@@ -33,10 +33,6 @@ export interface TelebizRemoveEntityFromChatDialog {
   title?: string;
 }
 
-export interface TelebizSubscriptionBlockedModal {
-  isOpen: boolean;
-}
-
 export interface TelebizFeaturesModal {
   isOpen: boolean;
   section?: TelebizFeatureSection;
@@ -56,7 +52,6 @@ export interface TelebizTabStateFields {
   reminderModal?: TelebizReminderModal;
   enableAgentModal?: TelebizEnableAgentModal;
   isTemplatesChatsModalOpen?: boolean;
-  subscriptionBlockedModal?: TelebizSubscriptionBlockedModal;
   featuresModal?: TelebizFeaturesModal;
   skillsModal?: TelebizSkillsModal;
 }

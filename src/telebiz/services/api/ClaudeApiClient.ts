@@ -2,6 +2,7 @@ import type {
   AgentConfig,
   AgentMessage,
   ClaudeModel,
+  SearchAnnotation,
   StreamCallback,
   ToolCall,
   ToolDefinition,
@@ -228,13 +229,9 @@ export class ClaudeApiClient {
             }
           }
 
-          if (content.length === 0) {
-            return undefined;
-          }
-
           return {
             role: 'assistant' as const,
-            content,
+            content: content.length > 0 ? content : [{ type: 'text', text: '' }],
           };
         }
 
@@ -242,7 +239,7 @@ export class ClaudeApiClient {
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
         };
-      }).filter(Boolean);
+      });
 
     // Extract system message if present
     const systemMessage = messages.find((msg) => msg.role === 'system');
@@ -263,8 +260,28 @@ export class ClaudeApiClient {
       requestBody.temperature = mergedConfig.temperature;
     }
 
-    if (tools.length > 0) {
-      requestBody.tools = this.convertToolsToClaudeFormat(tools);
+    // Build tools array (user-defined tools + server-side tools)
+    const claudeTools: unknown[] = tools.length > 0
+      ? this.convertToolsToClaudeFormat(tools)
+      : [];
+
+    // Inject web search and web fetch server tools (model decides when to use)
+    if (mergedConfig.webSearch?.enabled) {
+      claudeTools.push({
+        type: 'web_search_20250305',
+        name: 'web_search',
+        max_uses: mergedConfig.webSearch.maxResults || 5,
+      });
+      claudeTools.push({
+        type: 'web_fetch_20250910',
+        name: 'web_fetch',
+        max_uses: mergedConfig.webSearch.maxResults || 5,
+      });
+      logDebugMessage('info', 'Claude web search + web fetch enabled');
+    }
+
+    if (claudeTools.length > 0) {
+      requestBody.tools = claudeTools;
     }
 
     const response = await fetch(`${CLAUDE_API_URL}/messages`, {
@@ -273,6 +290,7 @@ export class ClaudeApiClient {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': ANTHROPIC_VERSION,
+        'anthropic-beta': 'web-fetch-2025-09-10',
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify(requestBody),
@@ -296,6 +314,8 @@ export class ClaudeApiClient {
     let currentToolUseId: string | undefined;
     let currentToolUseName: string | undefined;
     let currentToolUseInput = '';
+    // Track server-side tool use blocks (web search) - these are NOT regular tool calls
+    let isServerToolUseBlock = false;
 
     // Helper to read with timeout
     const readWithTimeout = async (): Promise<ReadableStreamReadResult<Uint8Array>> => {
@@ -333,7 +353,42 @@ export class ClaudeApiClient {
             // Handle different event types
             switch (parsed.type) {
               case 'content_block_start':
-                if (parsed.content_block?.type === 'tool_use') {
+                if (parsed.content_block?.type === 'server_tool_use') {
+                  // Server-side tool (e.g., web_search) - NOT a regular tool call
+                  isServerToolUseBlock = true;
+                } else if (parsed.content_block?.type === 'web_search_tool_result') {
+                  // Parse web search results and emit as annotations
+                  const searchContent = parsed.content_block?.content;
+                  if (Array.isArray(searchContent)) {
+                    const searchResults: SearchAnnotation[] = searchContent
+                      .filter((item: { type: string }) => item.type === 'web_search_result')
+                      .map((item: { url?: string; title?: string; page_age?: string }) => ({
+                        type: 'search_result' as const,
+                        url: item.url || '',
+                        title: item.title || 'Untitled',
+                        text: item.title || item.page_age || '',
+                      }))
+                      .filter((r: SearchAnnotation) => r.url);
+
+                    if (searchResults.length > 0) {
+                      logDebugMessage('info', `Claude returned ${searchResults.length} web search results`);
+                      onStream({
+                        type: 'annotations',
+                        annotations: { searchResults },
+                      });
+                    }
+                  }
+                } else if (parsed.content_block?.type === 'web_fetch_tool_result') {
+                  // Web fetch completed — emit URL as annotation
+                  const fetchContent = parsed.content_block?.content;
+                  if (fetchContent?.type === 'web_fetch_result' && fetchContent.url) {
+                    logDebugMessage('info', `Claude fetched URL: ${fetchContent.url}`);
+                    onStream({
+                      type: 'annotations',
+                      annotations: { webFetchUrls: [fetchContent.url] },
+                    });
+                  }
+                } else if (parsed.content_block?.type === 'tool_use') {
                   currentToolUseId = parsed.content_block.id;
                   currentToolUseName = parsed.content_block.name;
                   currentToolUseInput = '';
@@ -350,12 +405,18 @@ export class ClaudeApiClient {
                     reasoning: parsed.delta.thinking,
                   });
                 } else if (parsed.delta?.type === 'input_json_delta' && parsed.delta.partial_json) {
-                  currentToolUseInput += parsed.delta.partial_json;
+                  // Skip accumulating JSON for server-side tools (web search)
+                  if (!isServerToolUseBlock) {
+                    currentToolUseInput += parsed.delta.partial_json;
+                  }
                 }
                 break;
 
               case 'content_block_stop':
-                if (currentToolUseId && currentToolUseName) {
+                if (isServerToolUseBlock) {
+                  // Server tool block ended - reset flag, don't create a tool call
+                  isServerToolUseBlock = false;
+                } else if (currentToolUseId && currentToolUseName) {
                   toolCalls.set(currentToolUseId, {
                     id: currentToolUseId,
                     type: 'function',
